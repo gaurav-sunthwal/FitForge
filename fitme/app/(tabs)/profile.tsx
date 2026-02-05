@@ -76,8 +76,22 @@ export default function ProfileScreen() {
                 if (info.email) setUserEmail(info.email);
                 if (info.profileImage) setProfileImage(info.profileImage);
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error loading user data:", error);
+            Alert.alert("Error loading user data", error.message || "Failed to fetch profile data from server");
+
+            // Try to load from local storage as fallback
+            try {
+                const savedInfo = await AsyncStorage.getItem("personalInfo");
+                if (savedInfo) {
+                    const info = JSON.parse(savedInfo);
+                    if (info.name) setUserName(info.name);
+                    if (info.email) setUserEmail(info.email);
+                    if (info.profileImage) setProfileImage(info.profileImage);
+                }
+            } catch (localError) {
+                console.error("Error loading from local storage:", localError);
+            }
         }
     };
 

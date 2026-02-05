@@ -69,7 +69,12 @@ export async function GET(request: Request) {
             data: user
         });
     } catch (error: any) {
-        return NextResponse.json({ success: false, message: 'Failed to fetch profile' }, { status: 500 });
+        console.error('Error fetching profile:', error);
+        return NextResponse.json({
+            success: false,
+            message: 'Failed to fetch profile',
+            error: error.message
+        }, { status: 500 });
     }
 }
 
