@@ -8,6 +8,7 @@ import {
     Alert,
     Image,
     Linking,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -33,6 +34,7 @@ export default function ProfileScreen() {
     const [userEmail, setUserEmail] = useState("gaurav@example.com");
     const [showApiKeyModal, setShowApiKeyModal] = useState(false);
     const [geminiApiKey, setGeminiApiKey] = useState("");
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         loadUserData();
@@ -102,6 +104,12 @@ export default function ProfileScreen() {
         } catch (error) {
             console.error("Error loading API key:", error);
         }
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await Promise.all([loadUserData(), loadApiKey()]);
+        setRefreshing(false);
     };
 
     const handleSetTheme = async (mode: ThemeMode) => {
@@ -211,7 +219,18 @@ export default function ProfileScreen() {
 
     return (
         <View style={[styles.container, { backgroundColor: colors.background }]}>
-            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
+            <ScrollView
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.accent}
+                        colors={[colors.accent]}
+                    />
+                }
+            >
                 {/* Profile Header */}
                 <View style={styles.profileHeader}>
                     <TouchableOpacity style={styles.profileImageContainer} onPress={pickProfileImage}>

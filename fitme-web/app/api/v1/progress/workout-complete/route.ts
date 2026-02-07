@@ -6,15 +6,15 @@ import { getUserId } from '@/lib/auth';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { date, workoutType, durationMinutes, caloriesBurned } = body;
+        const { date, workoutType, workoutName, durationMinutes, duration, caloriesBurned } = body;
         const userId = await getUserId();
 
         const logDate = date ? new Date(date) : new Date();
 
         const [newLog] = await db.insert(workoutLogs).values({
             userId: userId,
-            workoutName: workoutType || 'General Workout',
-            duration: durationMinutes || 0,
+            workoutName: workoutName || workoutType || 'General Workout',
+            duration: duration || durationMinutes || 0,
             caloriesBurned: caloriesBurned || 0,
             timestamp: logDate,
         }).returning();

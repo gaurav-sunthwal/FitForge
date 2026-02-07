@@ -6,6 +6,7 @@ import {
     Alert,
     Modal,
     Platform,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -367,6 +368,7 @@ export default function CaloriesScreen() {
     const [foodLog, setFoodLog] = useState<FoodItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
 
     // Daily goals
     const [goals, setGoals] = useState({
@@ -402,29 +404,42 @@ export default function CaloriesScreen() {
             const response = await api.nutrition.getDaily(today);
 
             if (response.success && response.data) {
-                const { foodLogs, waterLogs, stats } = response.data;
+                const { foodLogs = [], waterLogs = [], stats = {} } = response.data;
 
                 setCaloriesConsumed(stats.totalCalories || 0);
                 setProteinConsumed(stats.totalProtein || 0);
                 setWaterGlasses(stats.totalWater || 0);
 
-                const formattedLogs = foodLogs.map((log: any) => ({
-                    id: log.id,
-                    name: log.foodName,
-                    calories: log.calories,
-                    protein: log.protein,
-                    time: new Date(log.timestamp).toLocaleTimeString("en-US", {
-                        hour: "numeric",
-                        minute: "2-digit",
-                    }),
-                }));
-                setFoodLog(formattedLogs);
+                if (foodLogs && Array.isArray(foodLogs)) {
+                    const formattedLogs = foodLogs.map((log: any) => ({
+                        id: log.id,
+                        name: log.foodName,
+                        calories: log.calories,
+                        protein: log.protein,
+                        time: new Date(log.timestamp).toLocaleTimeString("en-US", {
+                            hour: "numeric",
+                            minute: "2-digit",
+                        }),
+                    }));
+                    setFoodLog(formattedLogs);
+                }
             }
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error fetching daily data:", error);
+            // Set default values so the app doesn't crash
+            setCaloriesConsumed(0);
+            setProteinConsumed(0);
+            setWaterGlasses(0);
+            setFoodLog([]);
         } finally {
             setLoading(false);
         }
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await Promise.all([fetchDailyData(), loadGoals()]);
+        setRefreshing(false);
     };
 
     const [modalVisible, setModalVisible] = useState(false);
@@ -557,6 +572,14 @@ export default function CaloriesScreen() {
                 style={styles.scrollView}
                 contentContainerStyle={styles.scrollContent}
                 showsVerticalScrollIndicator={false}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.accent}
+                        colors={[colors.accent]}
+                    />
+                }
             >
                 {/* Header */}
                 <View style={styles.header}>

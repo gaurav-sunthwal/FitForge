@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const BASE_URL = 'https://fitme-gaurav.vercel.app/api/v1' || '';
+export const BASE_URL = 'http://localhost:3000/api/v1';
 // export const BASE_URL = 'http://localhost:3000/api/v1';
 // export const BASE_URL = 'http://172.28.194.241:3000/api/v1';
 

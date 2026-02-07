@@ -7,6 +7,7 @@ import {
     Animated,
     Dimensions,
     Modal,
+    RefreshControl,
     ScrollView,
     StyleSheet,
     Text,
@@ -438,6 +439,7 @@ export default function HomeScreen() {
     const [showDateModal, setShowDateModal] = useState(false);
     const [workoutDates, setWorkoutDates] = useState<{ [key: string]: any }>({});
     const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
         fetchInitialData();
@@ -457,16 +459,19 @@ export default function HomeScreen() {
 
             if (statsRes.success && statsRes.data) {
                 const { currentStreak, monthlyWorkouts, workoutDates: dates } = statsRes.data;
-                setStreak(currentStreak);
+                setStreak(currentStreak || 0);
                 setStats({
-                    thisMonth: monthlyWorkouts,
-                    consistency: Math.round((monthlyWorkouts / 30) * 100), // Simplified
+                    thisMonth: monthlyWorkouts || 0,
+                    consistency: Math.round(((monthlyWorkouts || 0) / 30) * 100), // Simplified
                 });
 
                 const formattedDates: { [key: string]: any } = {};
-                dates.forEach((dateStr: string) => {
-                    formattedDates[dateStr] = { marked: true, dotColor: colors.workoutMedium };
-                });
+                // Add safety check for dates array
+                if (dates && Array.isArray(dates)) {
+                    dates.forEach((dateStr: string) => {
+                        formattedDates[dateStr] = { marked: true, dotColor: colors.workoutMedium };
+                    });
+                }
                 // Mark today as selected if not in workout dates
                 const todayStr = new Date().toISOString().split('T')[0];
                 if (!formattedDates[todayStr]) {
@@ -479,6 +484,12 @@ export default function HomeScreen() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const onRefresh = async () => {
+        setRefreshing(true);
+        await fetchInitialData();
+        setRefreshing(false);
     };
 
     // Animation values
@@ -671,6 +682,14 @@ export default function HomeScreen() {
             <ScrollView
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
+                refreshControl={
+                    <RefreshControl
+                        refreshing={refreshing}
+                        onRefresh={onRefresh}
+                        tintColor={colors.accent}
+                        colors={[colors.accent]}
+                    />
+                }
             >
                 {/* Header */}
                 <View style={styles.header}>

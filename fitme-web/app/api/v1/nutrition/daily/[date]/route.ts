@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { foodLogs, waterLogs, userGoals } from '@/lib/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, gte, lte } from 'drizzle-orm';
 import { getUserId } from '@/lib/auth';
 
 export async function GET(
@@ -16,48 +16,78 @@ export async function GET(
         const endOfDay = new Date(date);
         endOfDay.setHours(23, 59, 59, 999);
 
-        // Fetch food logs for the date
-        const dailyFood = await db.query.foodLogs.findMany({
-            where: and(
-                eq(foodLogs.userId, userId),
-                sql`${foodLogs.timestamp} >= ${startOfDay} AND ${foodLogs.timestamp} <= ${endOfDay}`
-            ),
-        });
+        // Fetch food logs for the date using select
+        const dailyFood = await db
+            .select()
+            .from(foodLogs)
+            .where(
+                and(
+                    eq(foodLogs.userId, userId),
+                    gte(foodLogs.timestamp, startOfDay),
+                    lte(foodLogs.timestamp, endOfDay)
+                )
+            );
 
-        // Fetch water logs for the date
-        const dailyWater = await db.query.waterLogs.findMany({
-            where: and(
-                eq(waterLogs.userId, userId),
-                sql`${waterLogs.timestamp} >= ${startOfDay} AND ${waterLogs.timestamp} <= ${endOfDay}`
-            ),
-        });
+        // Fetch water logs for the date using select
+        const dailyWater = await db
+            .select()
+            .from(waterLogs)
+            .where(
+                and(
+                    eq(waterLogs.userId, userId),
+                    gte(waterLogs.timestamp, startOfDay),
+                    lte(waterLogs.timestamp, endOfDay)
+                )
+            );
 
-        // Fetch user goals
-        const goals = await db.query.userGoals.findFirst({
-            where: eq(userGoals.userId, userId),
-        });
+        // Fetch user goals using select
+        const goalsResult = await db
+            .select()
+            .from(userGoals)
+            .where(eq(userGoals.userId, userId))
+            .limit(1);
 
-        const caloriesConsumed = dailyFood.reduce((sum, item) => sum + item.calories, 0);
-        const waterCount = dailyWater.reduce((sum, item) => sum + item.amount, 0);
+        const goals = goalsResult[0];
 
-        const dailyProgress = {
-            date,
-            caloriesConsumed,
-            calorieTarget: goals?.calorieTarget || 2200,
-            waterCount,
-            waterTarget: goals?.waterTarget || 8,
-            foodItems: dailyFood.map(item => ({
+        // Calculate totals
+        const totalCalories = dailyFood.reduce((sum, item) => sum + item.calories, 0);
+        const totalProtein = dailyFood.reduce((sum, item) => sum + (item.protein || 0), 0);
+        const totalCarbs = dailyFood.reduce((sum, item) => sum + (item.carbs || 0), 0);
+        const totalFats = dailyFood.reduce((sum, item) => sum + (item.fats || 0), 0);
+        const totalWater = dailyWater.reduce((sum, item) => sum + item.amount, 0);
+
+        const responseData = {
+            foodLogs: dailyFood.map(item => ({
                 id: item.id,
                 foodName: item.foodName,
                 calories: item.calories,
-                protein: item.protein,
+                protein: item.protein || 0,
+                carbs: item.carbs || 0,
+                fats: item.fats || 0,
                 timestamp: item.timestamp.toISOString()
-            }))
+            })),
+            waterLogs: dailyWater.map(item => ({
+                id: item.id,
+                amount: item.amount,
+                timestamp: item.timestamp.toISOString()
+            })),
+            stats: {
+                totalCalories,
+                totalProtein,
+                totalCarbs,
+                totalFats,
+                totalWater,
+                calorieTarget: goals?.calorieTarget || 2000,
+                proteinTarget: goals?.proteinTarget || 150,
+                carbsTarget: goals?.carbsTarget || 200,
+                fatsTarget: goals?.fatsTarget || 65,
+                waterTarget: goals?.waterTarget || 8,
+            }
         };
 
         return NextResponse.json({
             success: true,
-            data: dailyProgress
+            data: responseData
         });
     } catch (error: any) {
         console.error('Error fetching nutrition data:', error);
