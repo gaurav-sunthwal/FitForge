@@ -352,8 +352,8 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 
 **Gaurav Sunthwal**
 
-- GitHub: [@gauravsunthwal-glimz](https://github.com/gauravsunthwal-glimz)
-- Email: gauravsunthwal@glimznow.com
+- GitHub: [@gaurav-sunthwal](https://github.com/gaurav-sunthwal)
+- Email: gauravsunthwalwork@gmail.com
 
 ---
 
