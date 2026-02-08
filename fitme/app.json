@@ -28,7 +28,8 @@
         "WRITE_EXTERNAL_STORAGE"
       ],
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.terminal2.fitme"
     },
     "web": {
       "output": "static",
@@ -52,6 +53,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2e37e596-0347-4026-bf2c-ff9782fbc0a0"
+      }
     }
   }
 }
