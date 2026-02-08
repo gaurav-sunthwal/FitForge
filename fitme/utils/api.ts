@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
+ // export const BASE_URL = 'https://fitme-gaurav.vercel.app/api/v1';
 export const BASE_URL = 'http://localhost:3000/api/v1';
-// export const BASE_URL = 'http://localhost:3000/api/v1';
 // export const BASE_URL = 'http://172.28.194.241:3000/api/v1';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -78,6 +78,7 @@ export const api = {
     // Progress APIs
     progress: {
         getStats: () => request<any>('/progress/stats'),
+        getAnalytics: (timeRange: 'week' | 'month' | '3months') => request<any>(`/progress/analytics?range=${timeRange}`),
         completeWorkout: (data: any) => request<any>('/progress/workout-complete', {
             method: 'POST',
             body: JSON.stringify(data),
