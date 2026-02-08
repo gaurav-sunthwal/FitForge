@@ -99,8 +99,10 @@ export default function ProfileScreen() {
 
     const loadApiKey = async () => {
         try {
-            const savedKey = await AsyncStorage.getItem("geminiApiKey");
-            if (savedKey) setGeminiApiKey(savedKey);
+            const response = await api.user.getProfile();
+            if (response.success && response.data?.geminiApiKey) {
+                setGeminiApiKey(response.data.geminiApiKey);
+            }
         } catch (error) {
             console.error("Error loading API key:", error);
         }
@@ -289,7 +291,7 @@ export default function ProfileScreen() {
                     <Text style={[styles.sectionTitle, { color: colors.textPrimary }]}>AI Features</Text>
                     <TouchableOpacity
                         style={[styles.aiCard, { backgroundColor: colors.cardBackground, borderColor: colors.border }]}
-                        onPress={() => setShowApiKeyModal(true)}
+                        onPress={() => router.push("/ai-settings")}
                         activeOpacity={0.7}
                     >
                         <View style={styles.aiCardLeft}>
@@ -298,10 +300,10 @@ export default function ProfileScreen() {
                             </View>
                             <View style={styles.aiTextContainer}>
                                 <Text style={[styles.aiCardTitle, { color: colors.textPrimary }]}>
-                                    Gemini API Key
+                                    AI Settings
                                 </Text>
                                 <Text style={[styles.aiCardSubtitle, { color: colors.textSecondary }]}>
-                                    {geminiApiKey ? "Configured ✓" : "Not configured"}
+                                    {geminiApiKey ? "API Key Configured ✓" : "Configure your API key"}
                                 </Text>
                             </View>
                         </View>

@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export const BASE_URL = 'https://fitme-gaurav.vercel.app/api/v1';
-// export const BASE_URL = 'http://localhost:3000/api/v1';
+// export const BASE_URL = 'https://fitme-gaurav.vercel.app/api/v1';
+export const BASE_URL = 'http://localhost:3000/api/v1';
 // export const BASE_URL = 'http://172.28.194.241:3000/api/v1';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -95,5 +95,18 @@ export const api = {
             method: 'POST',
             body: JSON.stringify({ image: imageBase64 }),
         }),
+        analyzeFoodByName: (foodName: string) => request<any>('/ai/analyze-meal', {
+            method: 'POST',
+            body: JSON.stringify({ foodName }),
+        }),
+        validateGymImage: (imageBase64: string) => request<any>('/ai/analyze-meal', {
+            method: 'POST',
+            body: JSON.stringify({ image: imageBase64, validateGymImage: true }),
+        }),
+        testApiKey: (apiKey: string) => request<any>('/ai/test-key', {
+            method: 'POST',
+            body: JSON.stringify({ apiKey }),
+        }),
     },
 };
+

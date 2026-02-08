@@ -8,6 +8,7 @@ export const users = pgTable('users', {
     imageUrl: text('image_url'),
     themeMode: text('theme_mode').default('dark'),
     notificationsEnabled: integer('notifications_enabled').default(1), // 1 for true, 0 for false
+    geminiApiKey: text('gemini_api_key'), // User's personal Gemini API key for AI features
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

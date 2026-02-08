@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -613,6 +614,75 @@ export default function HomeScreen() {
         }
     };
 
+    const validateGymImage = async (imageUri: string): Promise<boolean> => {
+        try {
+            // Convert image to base64
+            const response = await fetch(imageUri);
+            const blob = await response.blob();
+            const reader = new FileReader();
+
+            return new Promise((resolve, reject) => {
+                reader.onloadend = async () => {
+                    try {
+                        const base64data = reader.result as string;
+                        const validationResponse = await api.ai.validateGymImage(base64data);
+
+                        if (validationResponse.success && validationResponse.isGymImage) {
+                            resolve(true);
+                        } else {
+                            Alert.alert(
+                                "❌ Not a Gym Photo",
+                                validationResponse.message || "Please upload a gym/workout related photo.",
+                                [
+                                    { text: "Try Again", style: "default" },
+                                    {
+                                        text: "Upload Anyway",
+                                        style: "destructive",
+                                        onPress: () => resolve(true),
+                                    },
+                                ]
+                            );
+                            resolve(false);
+                        }
+                    } catch (error: any) {
+                        if (error.message?.includes("API key") || error.message?.includes("requiresApiKey")) {
+                            Alert.alert(
+                                "API Key Required",
+                                "You need to add your Gemini API key to use AI image validation. Would you like to add it now?",
+                                [
+                                    {
+                                        text: "Skip Validation",
+                                        style: "cancel",
+                                        onPress: () => resolve(true),
+                                    },
+                                    {
+                                        text: "Add API Key",
+                                        onPress: () => {
+                                            router.push("/ai-settings");
+                                            resolve(false);
+                                        },
+                                    },
+                                ]
+                            );
+                        } else {
+                            // On error, allow upload
+                            console.error("Validation error:", error);
+                            resolve(true);
+                        }
+                    }
+                };
+                reader.onerror = () => {
+                    console.error("Failed to read image");
+                    resolve(true); // Allow upload on error
+                };
+                reader.readAsDataURL(blob);
+            });
+        } catch (error) {
+            console.error("Image validation error:", error);
+            return true; // Allow upload on error
+        }
+    };
+
     const pickImage = async () => {
         const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (status !== 'granted') {
@@ -625,10 +695,14 @@ export default function HomeScreen() {
             allowsEditing: true,
             aspect: [4, 3],
             quality: 0.7,
+            base64: false,
         });
 
         if (!result.canceled) {
-            await handleUpload(result.assets[0].uri);
+            const isValid = await validateGymImage(result.assets[0].uri);
+            if (isValid) {
+                await handleUpload(result.assets[0].uri);
+            }
         }
     };
 
@@ -643,10 +717,14 @@ export default function HomeScreen() {
             allowsEditing: true,
             aspect: [4, 3],
             quality: 0.7,
+            base64: false,
         });
 
         if (!result.canceled) {
-            await handleUpload(result.assets[0].uri);
+            const isValid = await validateGymImage(result.assets[0].uri);
+            if (isValid) {
+                await handleUpload(result.assets[0].uri);
+            }
         }
     };
 

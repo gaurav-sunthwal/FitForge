@@ -7,19 +7,23 @@ import { getUserId } from '@/lib/auth';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { themeMode, notificationsEnabled } = body;
+        const { themeMode, notificationsEnabled, geminiApiKey } = body;
         const userId = await getUserId();
 
-        await db.update(users).set({
-            themeMode: themeMode,
-            notificationsEnabled: notificationsEnabled ? 1 : 0,
+        const updateData: any = {
             updatedAt: new Date(),
-        }).where(eq(users.id, userId));
+        };
+
+        if (themeMode !== undefined) updateData.themeMode = themeMode;
+        if (notificationsEnabled !== undefined) updateData.notificationsEnabled = notificationsEnabled ? 1 : 0;
+        if (geminiApiKey !== undefined) updateData.geminiApiKey = geminiApiKey;
+
+        await db.update(users).set(updateData).where(eq(users.id, userId));
 
         return NextResponse.json({
             success: true,
             message: 'Settings synced successfully',
-            data: { themeMode, notificationsEnabled }
+            data: { themeMode, notificationsEnabled, geminiApiKey: geminiApiKey ? '***' : null }
         });
     } catch (error: any) {
         console.error('Error updating settings:', error);

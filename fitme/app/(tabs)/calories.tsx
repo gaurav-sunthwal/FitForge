@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
@@ -355,6 +356,24 @@ export default function CaloriesScreen() {
             alignItems: "center",
             marginTop: 8,
         },
+        inputLabelRow: {
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+        },
+        aiButton: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 4,
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 8,
+            backgroundColor: colors.iconBackground,
+        },
+        aiButtonText: {
+            fontSize: 13,
+            fontWeight: "600",
+        },
         addButtonText: {
             fontSize: 16,
             fontWeight: "700",
@@ -368,6 +387,7 @@ export default function CaloriesScreen() {
     const [foodLog, setFoodLog] = useState<FoodItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [isAIAnalyzing, setIsAIAnalyzing] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
 
     // Daily goals
@@ -540,6 +560,63 @@ export default function CaloriesScreen() {
         } catch (error: any) {
             setIsAnalyzing(false);
             Alert.alert("Error", "Failed to process image. Please try again.");
+        }
+    };
+
+    const handleAIAnalyzeFood = async () => {
+        if (!foodName.trim()) {
+            Alert.alert("Error", "Please enter a food name first");
+            return;
+        }
+
+        setIsAIAnalyzing(true);
+        try {
+            const response = await api.ai.analyzeFoodByName(foodName);
+
+            if (response.success && response.data) {
+                const { calories, protein } = response.data;
+                setFoodCalories(calories.toString());
+                setFoodProtein(protein.toString());
+                Alert.alert("✨ AI Analysis Complete", `Nutrition data filled for ${foodName}`);
+            } else if (response.requiresApiKey) {
+                Alert.alert(
+                    "API Key Required",
+                    "You need to add your Gemini API key to use AI features. Would you like to add it now?",
+                    [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                            text: "Add API Key",
+                            onPress: () => {
+                                setModalVisible(false);
+                                router.push("/ai-settings");
+                            },
+                        },
+                    ]
+                );
+            } else {
+                Alert.alert("Error", response.message || "Failed to analyze food");
+            }
+        } catch (error: any) {
+            if (error.message?.includes("API key")) {
+                Alert.alert(
+                    "API Key Required",
+                    "You need to add your Gemini API key to use AI features. Would you like to add it now?",
+                    [
+                        { text: "Cancel", style: "cancel" },
+                        {
+                            text: "Add API Key",
+                            onPress: () => {
+                                setModalVisible(false);
+                                router.push("/ai-settings");
+                            },
+                        },
+                    ]
+                );
+            } else {
+                Alert.alert("Error", "Failed to analyze food. Please try again.");
+            }
+        } finally {
+            setIsAIAnalyzing(false);
         }
     };
 
@@ -816,7 +893,25 @@ export default function CaloriesScreen() {
 
                         <View style={styles.modalForm}>
                             <View style={styles.inputGroup}>
-                                <Text style={styles.inputLabel}>Food Name</Text>
+                                <View style={styles.inputLabelRow}>
+                                    <Text style={styles.inputLabel}>Food Name</Text>
+                                    <TouchableOpacity
+                                        style={styles.aiButton}
+                                        onPress={handleAIAnalyzeFood}
+                                        disabled={isAIAnalyzing || !foodName.trim()}
+                                    >
+                                        {isAIAnalyzing ? (
+                                            <ActivityIndicator size="small" color={colors.accent} />
+                                        ) : (
+                                            <>
+                                                <Ionicons name="sparkles" size={16} color={colors.accent} />
+                                                <Text style={[styles.aiButtonText, { color: colors.accent }]}>
+                                                    AI Fill
+                                                </Text>
+                                            </>
+                                        )}
+                                    </TouchableOpacity>
+                                </View>
                                 <TextInput
                                     style={styles.input}
                                     placeholder="e.g., Grilled Chicken"
