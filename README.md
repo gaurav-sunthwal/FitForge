@@ -130,7 +130,7 @@ FitForge is built with a modern, scalable architecture:
 
 ```sql
 ┌─────────────────────────────────────────────────────┐
-│ users                                                │
+│ users                                               │
 ├─────────────────────────────────────────────────────┤
 │ id, email, name, imageUrl, themeMode,               │
 │ notificationsEnabled, geminiApiKey                  │
@@ -171,7 +171,7 @@ FitForge is built with a modern, scalable architecture:
 #### 1️⃣ **Clone the Repository**
 
 ```bash
-git clone https://github.com/gauravsunthwal-glimz/FitForge.git
+git clone https://github.com/gaurav-sunthwal/FitForge.git
 cd FitForge
 ```
 
