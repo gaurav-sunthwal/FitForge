@@ -36,9 +36,10 @@ export default function RegisterScreen() {
 
         setLoading(true);
         try {
-            const response = await api.auth.register({ email, name });
+            const response = await api.auth.register({ email, name, password });
             if (response.success) {
-                await login(response.data.id);
+                // Save both userId and token
+                await login(response.data.user.id, response.data.token);
                 router.replace("/personal-info");
             } else {
                 Alert.alert("Error", response.message || "Registration failed");

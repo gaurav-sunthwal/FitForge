@@ -39,10 +39,10 @@ export default function LoginScreen() {
 
         setLoading(true);
         try {
-            const response = await api.auth.login(email);
+            const response = await api.auth.login(email, password);
             if (response.success) {
-                // If the user is found, proceed with login
-                await login(response.data.id);
+                // Save both userId and token
+                await login(response.data.user.id, response.data.token);
                 router.replace("/(tabs)");
             } else {
                 Alert.alert("Error", response.message || "Login failed");

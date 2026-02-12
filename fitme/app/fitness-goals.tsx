@@ -4,6 +4,8 @@ import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
     Alert,
+    KeyboardAvoidingView,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -261,7 +263,10 @@ export default function FitnessGoalsScreen() {
     }
 
     return (
-        <View style={styles.container}>
+        <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            style={styles.container}
+        >
             {/* Header */}
             <View style={styles.header}>
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
@@ -397,6 +402,6 @@ export default function FitnessGoalsScreen() {
                     <Text style={styles.saveButtonText}>Save Goals</Text>
                 </TouchableOpacity>
             </ScrollView>
-        </View>
+        </KeyboardAvoidingView>
     );
 }

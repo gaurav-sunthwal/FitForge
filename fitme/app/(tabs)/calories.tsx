@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import {
     ActivityIndicator,
     Alert,
+    KeyboardAvoidingView,
     Modal,
     Platform,
     RefreshControl,
@@ -16,6 +17,7 @@ import {
     View,
 } from "react-native";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
+import { Calendar } from "react-native-calendars";
 import { useTheme } from "../../constants/Colors";
 import { api } from "../../utils/api";
 
@@ -389,6 +391,8 @@ export default function CaloriesScreen() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isAIAnalyzing, setIsAIAnalyzing] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+    const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
     // Daily goals
     const [goals, setGoals] = useState({
@@ -398,9 +402,9 @@ export default function CaloriesScreen() {
     });
 
     useEffect(() => {
-        fetchDailyData();
+        fetchDailyData(selectedDate);
         loadGoals();
-    }, []);
+    }, [selectedDate]);
 
     const loadGoals = async () => {
         try {
@@ -417,11 +421,10 @@ export default function CaloriesScreen() {
         }
     };
 
-    const fetchDailyData = async () => {
+    const fetchDailyData = async (date: string) => {
         try {
             setLoading(true);
-            const today = new Date().toISOString().split("T")[0];
-            const response = await api.nutrition.getDaily(today);
+            const response = await api.nutrition.getDaily(date);
 
             if (response.success && response.data) {
                 const { foodLogs = [], waterLogs = [], stats = {} } = response.data;
@@ -458,7 +461,7 @@ export default function CaloriesScreen() {
 
     const onRefresh = async () => {
         setRefreshing(true);
-        await Promise.all([fetchDailyData(), loadGoals()]);
+        await Promise.all([fetchDailyData(selectedDate), loadGoals()]);
         setRefreshing(false);
     };
 
@@ -485,6 +488,7 @@ export default function CaloriesScreen() {
                 protein: parseInt(foodProtein),
                 carbs: 0,
                 fats: 0,
+                timestamp: selectedDate,
             };
 
             const response = await api.nutrition.logFood(data);
@@ -518,7 +522,7 @@ export default function CaloriesScreen() {
     const handleUpdateWater = async (increment: boolean) => {
         const newValue = increment ? waterGlasses + 1 : Math.max(0, waterGlasses - 1);
         try {
-            await api.nutrition.logWater(increment ? 1 : -1);
+            await api.nutrition.logWater(increment ? 1 : -1, selectedDate);
             setWaterGlasses(newValue);
         } catch (error: any) {
             console.error("Error updating water:", error);
@@ -661,14 +665,63 @@ export default function CaloriesScreen() {
                 {/* Header */}
                 <View style={styles.header}>
                     <Text style={styles.headerTitle}>Nutrition Tracker</Text>
-                    <Text style={styles.headerDate}>
-                        {new Date().toLocaleDateString("en-US", {
-                            weekday: "long",
-                            month: "short",
-                            day: "numeric",
-                        })}
-                    </Text>
+                    <TouchableOpacity
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+                        onPress={() => setIsDatePickerVisible(true)}
+                    >
+                        <Ionicons name="calendar-outline" size={18} color={colors.accent} />
+                        <Text style={styles.headerDate}>
+                            {new Date(selectedDate).toLocaleDateString("en-US", {
+                                weekday: "long",
+                                month: "short",
+                                day: "numeric",
+                            })}
+                        </Text>
+                        <Ionicons name="chevron-down" size={16} color={colors.textTertiary} />
+                    </TouchableOpacity>
                 </View>
+
+                {/* Date Picker Modal */}
+                <Modal
+                    visible={isDatePickerVisible}
+                    transparent={true}
+                    animationType="fade"
+                    onRequestClose={() => setIsDatePickerVisible(false)}
+                >
+                    <TouchableOpacity
+                        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+                        activeOpacity={1}
+                        onPress={() => setIsDatePickerVisible(false)}
+                    >
+                        <View style={{ backgroundColor: colors.cardBackground, borderRadius: 20, padding: 20, width: '90%', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 }}>
+                            <Calendar
+                                current={selectedDate}
+                                onDayPress={(day: any) => {
+                                    setSelectedDate(day.dateString);
+                                    setIsDatePickerVisible(false);
+                                }}
+                                markedDates={{
+                                    [selectedDate]: { selected: true, selectedColor: colors.accent }
+                                }}
+                                theme={{
+                                    backgroundColor: colors.cardBackground,
+                                    calendarBackground: colors.cardBackground,
+                                    textSectionTitleColor: colors.textSecondary,
+                                    selectedDayBackgroundColor: colors.accent,
+                                    selectedDayTextColor: '#ffffff',
+                                    todayTextColor: colors.accent,
+                                    dayTextColor: colors.textPrimary,
+                                    textDisabledColor: colors.textTertiary,
+                                    dotColor: colors.accent,
+                                    selectedDotColor: '#ffffff',
+                                    arrowColor: colors.accent,
+                                    monthTextColor: colors.textPrimary,
+                                    indicatorColor: colors.accent,
+                                }}
+                            />
+                        </View>
+                    </TouchableOpacity>
+                </Modal>
 
                 {/* Progress Rings */}
                 <View style={styles.progressSection}>
@@ -882,7 +935,10 @@ export default function CaloriesScreen() {
                 visible={modalVisible}
                 onRequestClose={() => setModalVisible(false)}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === "ios" ? "padding" : "height"}
+                    style={styles.modalOverlay}
+                >
                     <View style={styles.modalContent}>
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>Add Food Item</Text>
@@ -955,7 +1011,7 @@ export default function CaloriesScreen() {
                             </TouchableOpacity>
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         </View>
     );

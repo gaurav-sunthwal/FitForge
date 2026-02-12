@@ -1,17 +1,25 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
  export const BASE_URL = 'https://fitme-gaurav.vercel.app/api/v1';
-// export const BASE_URL = 'http://localhost:3000/api/v1';
+ // export const BASE_URL = 'http://localhost:3000/api/v1';
 // export const BASE_URL = 'http://172.28.194.241:3000/api/v1';
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${BASE_URL}${endpoint}`;
-    const userId = await AsyncStorage.getItem('userId');
+    const [userId, token] = await Promise.all([
+        AsyncStorage.getItem('userId'),
+        AsyncStorage.getItem('userToken')
+    ]);
 
     const headers: Record<string, string> = {
         'Content-Type': 'application/json',
     };
 
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Fallback for transition
     if (userId) {
         headers['x-user-id'] = userId;
     }
@@ -31,11 +39,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
 export const api = {
     // Auth APIs
     auth: {
-        login: (email: string) => request<any>('/auth/login', {
+        login: (email: string, password: string) => request<any>('/auth/login', {
             method: 'POST',
-            body: JSON.stringify({ email }),
+            body: JSON.stringify({ email, password }),
         }),
-        register: (data: { email: string, name: string }) => request<any>('/auth/register', {
+        register: (data: { email: string, name: string, password: string }) => request<any>('/auth/register', {
             method: 'POST',
             body: JSON.stringify(data),
         }),
@@ -69,9 +77,9 @@ export const api = {
         deleteFood: (foodId: string) => request<any>(`/nutrition/log/${foodId}`, {
             method: 'DELETE',
         }),
-        logWater: (amount: number) => request<any>('/nutrition/water', {
+        logWater: (amount: number, timestamp?: string) => request<any>('/nutrition/water', {
             method: 'POST',
-            body: JSON.stringify({ amount }),
+            body: JSON.stringify({ amount, timestamp }),
         }),
     },
 
@@ -109,4 +117,3 @@ export const api = {
         }),
     },
 };
-
