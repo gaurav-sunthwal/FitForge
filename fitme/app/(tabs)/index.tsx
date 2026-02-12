@@ -614,72 +614,93 @@ export default function HomeScreen() {
         }
     };
 
-    const validateGymImage = async (imageUri: string): Promise<boolean> => {
+    const validateGymImage = async (imageUri: string, base64?: string): Promise<boolean> => {
         try {
-            // Convert image to base64
-            const response = await fetch(imageUri);
-            const blob = await response.blob();
-            const reader = new FileReader();
+            let base64Data = base64;
 
-            return new Promise((resolve, reject) => {
-                reader.onloadend = async () => {
-                    try {
-                        const base64data = reader.result as string;
-                        const validationResponse = await api.ai.validateGymImage(base64data);
+            if (!base64Data) {
+                // Fallback for when base64 is not provided
+                const response = await fetch(imageUri);
+                const blob = await response.blob();
+                const reader = new FileReader();
 
-                        if (validationResponse.success && validationResponse.isGymImage) {
-                            resolve(true);
-                        } else {
-                            Alert.alert(
-                                "❌ Not a Gym Photo",
-                                validationResponse.message || "Please upload a gym/workout related photo.",
-                                [
-                                    { text: "Try Again", style: "default" },
-                                    {
-                                        text: "Upload Anyway",
-                                        style: "destructive",
-                                        onPress: () => resolve(true),
-                                    },
-                                ]
-                            );
-                            resolve(false);
+                return new Promise((resolve) => {
+                    reader.onloadend = async () => {
+                        try {
+                            const result = reader.result as string;
+                            const validationResponse = await api.ai.validateGymImage(result);
+                            handleValidationResponse(validationResponse, resolve);
+                        } catch (error: any) {
+                            handleValidationError(error, resolve);
                         }
-                    } catch (error: any) {
-                        if (error.message?.includes("API key") || error.message?.includes("requiresApiKey")) {
-                            Alert.alert(
-                                "API Key Required",
-                                "You need to add your Gemini API key to use AI image validation. Would you like to add it now?",
-                                [
-                                    {
-                                        text: "Skip Validation",
-                                        style: "cancel",
-                                        onPress: () => resolve(true),
-                                    },
-                                    {
-                                        text: "Add API Key",
-                                        onPress: () => {
-                                            router.push("/ai-settings");
-                                            resolve(false);
-                                        },
-                                    },
-                                ]
-                            );
-                        } else {
-                            // On error, allow upload
-                            console.error("Validation error:", error);
-                            resolve(true);
-                        }
-                    }
-                };
-                reader.onerror = () => {
-                    console.error("Failed to read image");
-                    resolve(true); // Allow upload on error
-                };
-                reader.readAsDataURL(blob);
+                    };
+                    reader.onerror = () => resolve(true);
+                    reader.readAsDataURL(blob);
+                });
+            }
+
+            const validationResponse = await api.ai.validateGymImage(`data:image/jpeg;base64,${base64Data}`);
+
+            return new Promise((resolve) => {
+                handleValidationResponse(validationResponse, resolve);
             });
-        } catch (error) {
-            console.error("Image validation error:", error);
-            return true; // Allow upload on error
+        } catch (error: any) {
+            return new Promise((resolve) => {
+                handleValidationError(error, resolve);
+            });
+        }
+    };
+
+    const handleValidationResponse = (validationResponse: any, resolve: (val: boolean) => void) => {
+        if (validationResponse.success && validationResponse.isGymImage) {
+            resolve(true);
+        } else {
+            Alert.alert(
+                "❌ Not a Gym Photo",
+                validationResponse.message || "Please upload a gym/workout related photo.",
+                [
+                    { text: "Try Again", style: "default" },
+                    {
+                        text: "Upload Anyway",
+                        style: "destructive",
+                        onPress: () => resolve(true),
+                    },
+                ]
+            );
+            resolve(false);
+        }
+    };
+
+    const handleValidationError = (error: any, resolve: (val: boolean) => void) => {
+        if (error.message?.includes("API key") || error.message?.includes("requiresApiKey")) {
+            Alert.alert(
+                "API Key Required",
+                "You need to add your Gemini API key to use AI image validation. Would you like to add it now?",
+                [
+                    {
+                        text: "Skip Validation",
+                        style: "cancel",
+                        onPress: () => resolve(true),
+                    },
+                    {
+                        text: "Add API Key",
+                        onPress: () => {
+                            router.push("/ai-settings");
+                            resolve(false);
+                        },
+                    },
+                ]
+            );
+        } else {
+            console.warn("Validation error:", error);
+            Alert.alert(
+                "Validation Error",
+                "There was a problem checking your image. You can skip validation and upload it anyway.",
+                [
+                    { text: "Try Again", style: "default" },
+                    { text: "Upload Anyway", onPress: () => resolve(true) }
+                ]
+            );
         }
     };
 
@@ -695,11 +716,11 @@ export default function HomeScreen() {
             allowsEditing: true,
             aspect: [4, 3],
             quality: 0.7,
-            base64: false,
+            base64: true,
         });
 
         if (!result.canceled) {
-            const isValid = await validateGymImage(result.assets[0].uri);
+            const isValid = await validateGymImage(result.assets[0].uri, result.assets[0].base64 || undefined);
             if (isValid) {
                 await handleUpload(result.assets[0].uri);
             }
@@ -717,11 +738,11 @@ export default function HomeScreen() {
             allowsEditing: true,
             aspect: [4, 3],
             quality: 0.7,
-            base64: false,
+            base64: true,
         });
 
         if (!result.canceled) {
-            const isValid = await validateGymImage(result.assets[0].uri);
+            const isValid = await validateGymImage(result.assets[0].uri, result.assets[0].base64 || undefined);
             if (isValid) {
                 await handleUpload(result.assets[0].uri);
             }

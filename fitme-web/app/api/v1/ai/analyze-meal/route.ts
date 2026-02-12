@@ -50,15 +50,18 @@ export async function POST(request: Request) {
             ]);
 
             const responseText = result.response.text();
+            console.log('AI Gym Validation Response:', responseText);
+
+            // More robust JSON extraction
             const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-            const validationData = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+            const validationData = jsonMatch ? JSON.parse(jsonMatch[0].replace(/```json|```/g, '')) : null;
 
             if (!validationData?.isGymImage) {
                 return NextResponse.json({
-                    success: false,
+                    success: true,
                     message: validationData?.reason || 'This doesn\'t appear to be a gym/workout photo. Please upload a fitness-related image.',
                     isGymImage: false
-                }, { status: 400 });
+                }, { status: 200 });
             }
 
             return NextResponse.json({
@@ -108,8 +111,10 @@ export async function POST(request: Request) {
             ]);
 
             const responseText = result.response.text();
+            console.log('AI Food Analysis Response:', responseText);
+
             const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-            const analysisData = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+            const analysisData = jsonMatch ? JSON.parse(jsonMatch[0].replace(/```json|```/g, '')) : null;
 
             if (!analysisData) {
                 throw new Error('Failed to parse AI response');
