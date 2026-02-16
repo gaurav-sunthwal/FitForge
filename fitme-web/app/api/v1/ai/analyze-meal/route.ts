@@ -71,19 +71,38 @@ export async function POST(request: Request) {
             });
         }
 
-        // Handle food name to nutrition analysis
         if (foodName && !image) {
-            const foodPrompt = `Provide nutritional information for: "${foodName}". 
-            Return ONLY a JSON object with: { "foodName": "${foodName}", "calories": number, "protein": number (in grams), "carbs": number (in grams), "fats": number (in grams) }
-            Use standard serving sizes. Be accurate and realistic.`;
+            const foodPrompt = `Analyze the food text: "${foodName}". 
+            If it contains multiple items (e.g., "1 chicken thali, 1 pakoda, 1 burger"), split them into individual items.
+            Return ONLY a JSON object with the following structure:
+            {
+              "items": [
+                {
+                  "foodName": "specific food name (e.g., Chicken Thali)",
+                  "calories": number,
+                  "protein": number (in grams),
+                  "carbs": number (in grams),
+                  "fats": number (in grams)
+                }
+              ]
+            }
+            Use standard serving sizes if not specified. Be accurate and realistic.`;
 
             const result = await model.generateContent(foodPrompt);
             const responseText = result.response.text();
+            console.log('AI Food Text Analysis Response:', responseText);
+            
             const jsonMatch = responseText.match(/\{[\s\S]*\}/);
             const nutritionData = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
 
             if (!nutritionData) {
                 throw new Error('Failed to parse AI response');
+            }
+
+            // Normalizing response for frontend consistency
+            // If the AI returns the old format (just fields), wrap it
+            if (!nutritionData.items && nutritionData.foodName) {
+                nutritionData.items = [nutritionData];
             }
 
             return NextResponse.json({

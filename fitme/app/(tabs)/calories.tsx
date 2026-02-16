@@ -390,8 +390,12 @@ export default function CaloriesScreen() {
     const [loading, setLoading] = useState(true);
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [isAIAnalyzing, setIsAIAnalyzing] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split("T")[0]);
+    const [selectedDate, setSelectedDate] = useState(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    });
     const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
 
     // Daily goals
@@ -482,6 +486,7 @@ export default function CaloriesScreen() {
         }
 
         try {
+            setIsSubmitting(true);
             const data = {
                 foodName,
                 calories: parseInt(foodCalories),
@@ -493,6 +498,7 @@ export default function CaloriesScreen() {
 
             const response = await api.nutrition.logFood(data);
             if (response.success) {
+                // ... same as before
                 const newFood: FoodItem = {
                     id: response.data.id || Date.now().toString(),
                     name: foodName,
@@ -516,6 +522,8 @@ export default function CaloriesScreen() {
             }
         } catch (error: any) {
             Alert.alert("Error", `Failed to log food: ${error.message}`);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -529,21 +537,54 @@ export default function CaloriesScreen() {
         }
     };
 
-    const handleTakePhoto = async () => {
+    const handlePhotoOptions = () => {
+        Alert.alert(
+            "Scan Food",
+            "Choose how you want to add a photo",
+            [
+                {
+                    text: "Take Photo",
+                    onPress: () => handlePhotoAction(false),
+                },
+                {
+                    text: "Choose from Gallery",
+                    onPress: () => handlePhotoAction(true),
+                },
+                {
+                    text: "Cancel",
+                    style: "cancel",
+                },
+            ]
+        );
+    };
+
+
+    const handlePhotoAction = async (fromLibrary: boolean = false) => {
         try {
-            const { status } = await ImagePicker.requestCameraPermissionsAsync();
-            if (status !== "granted") {
-                Alert.alert("Permission Denied", "Camera permission is required to take photos");
+            const permission = fromLibrary
+                ? await ImagePicker.requestMediaLibraryPermissionsAsync()
+                : await ImagePicker.requestCameraPermissionsAsync();
+
+            if (permission.status !== "granted") {
+                Alert.alert("Permission Denied", `Permission is required to ${fromLibrary ? 'access gallery' : 'take photos'}`);
                 return;
             }
 
-            const result = await ImagePicker.launchCameraAsync({
-                mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                allowsEditing: true,
-                aspect: [4, 3],
-                quality: 0.5,
-                base64: true,
-            });
+            const result = fromLibrary
+                ? await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [4, 3],
+                    quality: 0.5,
+                    base64: true,
+                })
+                : await ImagePicker.launchCameraAsync({
+                    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                    allowsEditing: true,
+                    aspect: [4, 3],
+                    quality: 0.5,
+                    base64: true,
+                });
 
             if (!result.canceled && result.assets[0].base64) {
                 setIsAnalyzing(true);
@@ -578,10 +619,87 @@ export default function CaloriesScreen() {
             const response = await api.ai.analyzeFoodByName(foodName);
 
             if (response.success && response.data) {
-                const { calories, protein } = response.data;
-                setFoodCalories(calories.toString());
-                setFoodProtein(protein.toString());
-                Alert.alert("✨ AI Analysis Complete", `Nutrition data filled for ${foodName}`);
+                // Check if we have multiple items
+                const items = response.data.items || [response.data];
+
+                if (items.length > 1) {
+                    // Multiple items flow
+                    Alert.alert(
+                        "Multiple Items Found",
+                        `Found ${items.length} items:\n${items.map((i: any) => `• ${i.foodName} (${i.calories} cal)`).join('\n')}\n\nAdd all to your log?`,
+                        [
+                            { text: "Cancel", style: "cancel" },
+                            {
+                                text: "Add All",
+                                onPress: async () => {
+                                    setIsSubmitting(true);
+                                    try {
+                                        let totalCals = 0;
+                                        let totalProt = 0;
+                                        const newFoods: FoodItem[] = [];
+
+                                        // Log each item
+                                        for (const item of items) {
+                                            const cals = Math.round(Number(item.calories));
+                                            const prot = Math.round(Number(item.protein));
+                                            const car = Math.round(Number(item.carbs || 0));
+                                            const fat = Math.round(Number(item.fats || 0));
+
+                                            const foodData = {
+                                                foodName: item.foodName,
+                                                calories: cals,
+                                                protein: prot,
+                                                carbs: car,
+                                                fats: fat,
+                                                timestamp: selectedDate,
+                                            };
+
+                                            const logResponse = await api.nutrition.logFood(foodData);
+                                            if (logResponse.success) {
+                                                totalCals += cals;
+                                                totalProt += prot;
+                                                newFoods.push({
+                                                    id: logResponse.data.id || Date.now().toString() + Math.random(),
+                                                    name: item.foodName,
+                                                    calories: cals,
+                                                    protein: prot,
+                                                    time: new Date().toLocaleTimeString("en-US", {
+                                                        hour: "numeric",
+                                                        minute: "2-digit",
+                                                    }),
+                                                });
+                                            }
+                                        }
+
+                                        // Update state
+                                        setFoodLog(prev => [...newFoods, ...prev]);
+                                        setCaloriesConsumed(prev => prev + totalCals);
+                                        setProteinConsumed(prev => prev + totalProt);
+                                        
+                                        // Reset and close
+                                        setFoodName("");
+                                        setFoodCalories("");
+                                        setFoodProtein("");
+                                        setModalVisible(false);
+                                        Alert.alert("Success", `Added ${newFoods.length} items to your log.`);
+
+                                    } catch (err: any) {
+                                        Alert.alert("Error", "Failed to add some items.");
+                                    } finally {
+                                        setIsSubmitting(false);
+                                    }
+                                }
+                            }
+                        ]
+                    );
+                } else {
+                    // Single item flow - fill form
+                    const item = items[0];
+                    setFoodName(item.foodName); // user might have typed generic text, use AI's specific name
+                    setFoodCalories(item.calories.toString());
+                    setFoodProtein(item.protein.toString());
+                    Alert.alert("✨ AI Analysis Complete", `Nutrition data filled for ${item.foodName}`);
+                }
             } else if (response.requiresApiKey) {
                 Alert.alert(
                     "API Key Required",
@@ -617,7 +735,8 @@ export default function CaloriesScreen() {
                     ]
                 );
             } else {
-                Alert.alert("Error", "Failed to analyze food. Please try again.");
+                const errorMsg = error.message || "Failed to analyze food. Please try again.";
+                Alert.alert("Error", errorMsg);
             }
         } finally {
             setIsAIAnalyzing(false);
@@ -850,13 +969,13 @@ export default function CaloriesScreen() {
                     <View style={styles.addFoodButtons}>
                         <TouchableOpacity
                             style={styles.addFoodButton}
-                            onPress={handleTakePhoto}
+                            onPress={handlePhotoOptions}
                         >
                             <View style={styles.addFoodIconContainer}>
                                 <Ionicons name="camera" size={28} color={colors.accent} />
                             </View>
-                            <Text style={styles.addFoodButtonText}>Take Photo</Text>
-                            <Text style={styles.addFoodButtonSubText}>AI Analysis</Text>
+                            <Text style={styles.addFoodButtonText}>Scan Food</Text>
+                            <Text style={styles.addFoodButtonSubText}>Camera or Gallery</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
@@ -866,7 +985,7 @@ export default function CaloriesScreen() {
                             <View style={styles.addFoodIconContainer}>
                                 <Ionicons name="add-circle" size={28} color="#4CAF50" />
                             </View>
-                            <Text style={styles.addFoodButtonText}>Add Manually</Text>
+                            <Text style={styles.addFoodButtonText}>Manual</Text>
                             <Text style={styles.addFoodButtonSubText}>Enter details</Text>
                         </TouchableOpacity>
                     </View>
@@ -1004,15 +1123,31 @@ export default function CaloriesScreen() {
                             </View>
 
                             <TouchableOpacity
-                                style={styles.addButton}
+                                style={[styles.addButton, { opacity: isSubmitting ? 0.7 : 1 }]}
                                 onPress={handleAddFood}
+                                disabled={isSubmitting}
                             >
-                                <Text style={styles.addButtonText}>Add to Log</Text>
+                                {isSubmitting ? (
+                                    <ActivityIndicator color={colors.textWhite} />
+                                ) : (
+                                    <Text style={styles.addButtonText}>Add to Log</Text>
+                                )}
                             </TouchableOpacity>
                         </View>
                     </View>
                 </KeyboardAvoidingView>
             </Modal>
+
+            {/* AI Analysis Loading Overlay */}
+            {isAnalyzing && (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }]}>
+                    <View style={{ backgroundColor: colors.cardBackground, padding: 30, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 }}>
+                        <ActivityIndicator size="large" color={colors.accent} />
+                        <Text style={{ marginTop: 20, fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>Analyzing Meal...</Text>
+                        <Text style={{ marginTop: 8, fontSize: 14, color: colors.textSecondary }}>Wait a moment while AI scans your food</Text>
+                    </View>
+                </View>
+            )}
         </View>
     );
 }

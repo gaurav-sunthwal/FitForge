@@ -432,6 +432,7 @@ export default function HomeScreen() {
     const [userName, setUserName] = useState("Gaurav");
     const [showFullCalendar, setShowFullCalendar] = useState(false);
     const [uploading, setUploading] = useState(false);
+    const [isValidating, setIsValidating] = useState(false);
     const [uploadProgress, setUploadProgress] = useState(0);
     const [todayCompleted, setTodayCompleted] = useState(false);
     const [lastUploadTime, setLastUploadTime] = useState<number | null>(null);
@@ -474,7 +475,8 @@ export default function HomeScreen() {
                     });
                 }
                 // Mark today as selected if not in workout dates
-                const todayStr = new Date().toISOString().split('T')[0];
+                const d = new Date();
+                const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                 if (!formattedDates[todayStr]) {
                     formattedDates[todayStr] = { selected: true, selectedColor: colors.calendarToday };
                 }
@@ -615,6 +617,7 @@ export default function HomeScreen() {
     };
 
     const validateGymImage = async (imageUri: string, base64?: string): Promise<boolean> => {
+        setIsValidating(true);
         try {
             let base64Data = base64;
 
@@ -634,7 +637,10 @@ export default function HomeScreen() {
                             handleValidationError(error, resolve);
                         }
                     };
-                    reader.onerror = () => resolve(true);
+                    reader.onerror = () => {
+                        setIsValidating(false);
+                        resolve(true);
+                    };
                     reader.readAsDataURL(blob);
                 });
             }
@@ -652,6 +658,7 @@ export default function HomeScreen() {
     };
 
     const handleValidationResponse = (validationResponse: any, resolve: (val: boolean) => void) => {
+        setIsValidating(false);
         if (validationResponse.success && validationResponse.isGymImage) {
             resolve(true);
         } else {
@@ -672,6 +679,7 @@ export default function HomeScreen() {
     };
 
     const handleValidationError = (error: any, resolve: (val: boolean) => void) => {
+        setIsValidating(false);
         if (error.message?.includes("API key") || error.message?.includes("requiresApiKey")) {
             Alert.alert(
                 "API Key Required",
@@ -1063,8 +1071,17 @@ export default function HomeScreen() {
                     </View>
                 </View>
             </Modal>
+
+            {/* AI Validation Loading Overlay */}
+            {isValidating && (
+                <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center', zIndex: 1000 }]}>
+                    <View style={{ backgroundColor: colors.cardBackground, padding: 30, borderRadius: 20, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.3, shadowRadius: 20, elevation: 10 }}>
+                        <ActivityIndicator size="large" color={colors.accent} />
+                        <Text style={{ marginTop: 20, fontSize: 18, fontWeight: '700', color: colors.textPrimary }}>Validating Photo...</Text>
+                        <Text style={{ marginTop: 8, fontSize: 14, color: colors.textSecondary }}>Checking if this is a gym photo</Text>
+                    </View>
+                </View>
+            )}
         </View>
     );
 }
-
-

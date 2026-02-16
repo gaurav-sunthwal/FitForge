@@ -18,10 +18,10 @@ export async function POST(request: Request) {
         const [newLog] = await db.insert(foodLogs).values({
             userId: userId,
             foodName,
-            calories,
-            protein: protein || 0,
-            carbs: carbs || 0,
-            fats: fats || 0,
+            calories: Math.round(Number(calories)),
+            protein: Math.round(Number(protein || 0)),
+            carbs: Math.round(Number(carbs || 0)),
+            fats: Math.round(Number(fats || 0)),
             timestamp: logDate,
         }).returning();
 
