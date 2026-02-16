@@ -216,12 +216,11 @@ export class NotificationService {
                     data: { type: 'gym-selfie' },
                 },
                 trigger: {
-                    type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+                    type: Notifications.SchedulableTriggerInputTypes.DAILY,
                     hour: hours,
                     minute: minutes,
-                    repeats: true,
                     channelId: Platform.OS === 'android' ? 'gym-reminders' : undefined,
-                } as any,
+                },
             });
 
             return identifier;
@@ -266,12 +265,11 @@ export class NotificationService {
                     data: { type: 'meal-reminder', mealType },
                 },
                 trigger: {
-                    type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+                    type: Notifications.SchedulableTriggerInputTypes.DAILY,
                     hour: hours,
                     minute: minutes,
-                    repeats: true,
                     channelId: Platform.OS === 'android' ? 'meal-reminders' : undefined,
-                } as any,
+                },
             });
 
             return identifier;
@@ -303,12 +301,11 @@ export class NotificationService {
                         data: { type: 'water-reminder' },
                     },
                     trigger: {
-                        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+                        type: Notifications.SchedulableTriggerInputTypes.DAILY,
                         hour: hour,
                         minute: 0,
-                        repeats: true,
                         channelId: Platform.OS === 'android' ? 'water-reminders' : undefined,
-                    } as any,
+                    },
                 });
                 
                 identifiers.push(identifier);
@@ -336,6 +333,37 @@ export class NotificationService {
             });
         } catch (error) {
             console.error('Error sending immediate notification:', error);
+        }
+    }
+
+    /**
+     * Schedule a test notification for 1 minute from now (for testing scheduling)
+     */
+    static async scheduleTestNotification(): Promise<void> {
+        try {
+            const now = new Date();
+            const testTime = new Date(now.getTime() + 60 * 1000); // 1 minute from now
+            
+            await Notifications.scheduleNotificationAsync({
+                content: {
+                    title: "🎉 Test Notification",
+                    body: `Scheduled notifications are working! This was set for ${testTime.toLocaleTimeString()}`,
+                    sound: true,
+                    priority: Notifications.AndroidNotificationPriority.HIGH,
+                    vibrate: [0, 250, 250, 250],
+                    data: { type: 'test' },
+                },
+                trigger: {
+                    type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+                    seconds: 60, // Fire in 60 seconds
+                    channelId: Platform.OS === 'android' ? 'default' : undefined,
+                },
+            });
+            
+            console.log(`Test notification scheduled for: ${testTime.toLocaleTimeString()}`);
+        } catch (error) {
+            console.error('Error scheduling test notification:', error);
+            throw error;
         }
     }
 
