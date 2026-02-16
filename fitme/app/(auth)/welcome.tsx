@@ -23,9 +23,10 @@ export default function WelcomeScreen() {
     const { completeOnboarding } = useAuth();
 
     const handleGetStarted = async () => {
-        await completeOnboarding();
-        router.push("/(auth)/login");
+        // await completeOnboarding(); // Don't complete yet, wait for register success
+        router.push("/(auth)/register"); // "Get Started" usually goes to register
     };
+
 
     return (
         <View style={styles.container}>
@@ -64,8 +65,8 @@ export default function WelcomeScreen() {
 
                             <TouchableOpacity
                                 style={styles.loginLink}
-                                onPress={async () => {
-                                    await completeOnboarding();
+                                onPress={() => {
+                                    // await completeOnboarding();
                                     router.push("/(auth)/login");
                                 }}
                             >

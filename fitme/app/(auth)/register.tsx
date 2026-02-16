@@ -58,7 +58,7 @@ export default function RegisterScreen() {
         >
             <ScrollView contentContainerStyle={styles.scrollContent}>
                 <Animated.View entering={FadeInUp.duration(800)} style={styles.header}>
-                    <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+                    <TouchableOpacity onPress={() => router.push("/(auth)/welcome")} style={styles.backButton}>
                         <Ionicons name="arrow-back" size={24} color={colors.textPrimary} />
                     </TouchableOpacity>
                     <Text style={[styles.title, { color: colors.textPrimary }]}>Create Account</Text>

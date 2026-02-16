@@ -197,7 +197,7 @@ export default function ProfileScreen() {
             id: "notifications",
             title: "Notifications",
             icon: "notifications-outline" as const,
-            onPress: () => Alert.alert("Coming Soon", "Notification settings"),
+            onPress: () => router.push("/notification-settings"),
         },
         {
             id: "privacy",

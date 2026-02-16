@@ -1,13 +1,17 @@
 import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
-import { router } from "expo-router";
-import React, { useEffect, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
     ActivityIndicator,
     Alert,
     Animated,
     Dimensions,
     Modal,
+    Platform,
+    ImageBackground, // Added import
+    Image, // Added for fallback
     RefreshControl,
     ScrollView,
     StyleSheet,
@@ -54,30 +58,24 @@ export default function HomeScreen() {
             flex: 1,
         },
         greeting: {
-            fontSize: 14,
+            fontSize: 16,
             color: colors.textSecondary,
             fontWeight: "500",
-            marginBottom: 4,
+            marginBottom: 2,
         },
         userName: {
-            fontSize: 20,
+            fontSize: 28,
             color: colors.textPrimary,
-            fontWeight: "700",
-            lineHeight: 26,
+            fontWeight: "800",
+            letterSpacing: -0.5,
         },
         streakBadge: {
             flexDirection: "row",
             alignItems: "center",
             gap: 6,
-            backgroundColor: colors.cardBackground,
             paddingHorizontal: 12,
             paddingVertical: 8,
             borderRadius: 20,
-            shadowColor: colors.shadow,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.1,
-            shadowRadius: 4,
-            elevation: 3,
         },
         streakNumber: {
             fontSize: 18,
@@ -93,25 +91,28 @@ export default function HomeScreen() {
         statCard: {
             flex: 1,
             backgroundColor: colors.cardBackground,
-            borderRadius: 12,
-            padding: 12,
+            borderRadius: 16,
+            paddingVertical: 16,
+            paddingHorizontal: 8,
             alignItems: "center",
             shadowColor: colors.shadow,
-            shadowOffset: { width: 0, height: 1 },
-            shadowOpacity: 0.05,
-            shadowRadius: 4,
-            elevation: 2,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.12,
+            shadowRadius: 14,
+            elevation: 6,
+            borderWidth: 1.5,
+            borderColor: "rgba(255, 255, 255, 0.08)",
         },
         statValue: {
-            fontSize: 20,
+            fontSize: 22,
             color: colors.textPrimary,
-            fontWeight: "700",
+            fontWeight: "800",
             marginTop: 8,
         },
         statLabel: {
-            fontSize: 11,
+            fontSize: 12,
             color: colors.textSecondary,
-            fontWeight: "500",
+            fontWeight: "600",
             marginTop: 4,
         },
         calendarSection: {
@@ -171,6 +172,14 @@ export default function HomeScreen() {
         },
         todayCircle: {
             backgroundColor: colors.calendarToday,
+            borderWidth: 2,
+            borderColor: colors.background,
+            transform: [{ scale: 1.1 }],
+            shadowColor: colors.calendarToday,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 4,
+            elevation: 4,
         },
         workoutCircle: {
             backgroundColor: colors.calendarWorkout,
@@ -196,6 +205,51 @@ export default function HomeScreen() {
         calendar: {
             borderRadius: 16,
         },
+        calorieButtonContainer: {
+            paddingHorizontal: 20,
+            marginBottom: 24,
+        },
+        calorieTrackButton: {
+            backgroundColor: colors.cardBackground,
+            borderRadius: 20,
+            padding: 20,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            shadowColor: colors.accent,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.2,
+            shadowRadius: 12,
+            elevation: 8,
+            borderWidth: 2,
+            borderColor: colors.accent,
+        },
+        calorieButtonLeft: {
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 16,
+        },
+        calorieIconContainer: {
+            width: 56,
+            height: 56,
+            borderRadius: 28,
+            backgroundColor: colors.accent,
+            justifyContent: "center",
+            alignItems: "center",
+        },
+        calorieButtonTextContainer: {
+            gap: 4,
+        },
+        calorieButtonTitle: {
+            fontSize: 18,
+            color: colors.textPrimary,
+            fontWeight: "700",
+        },
+        calorieButtonSubtitle: {
+            fontSize: 13,
+            color: colors.textSecondary,
+            fontWeight: "500",
+        },
         photoSection: {
             paddingHorizontal: 20,
             marginBottom: 32,
@@ -212,10 +266,12 @@ export default function HomeScreen() {
             alignItems: "center",
             gap: 12,
             shadowColor: colors.shadow,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            elevation: 2,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.15,
+            shadowRadius: 10,
+            elevation: 6,
+            borderWidth: 1.5,
+            borderColor: "rgba(255, 255, 255, 0.1)",
         },
         photoIconContainer: {
             width: 64,
@@ -224,11 +280,16 @@ export default function HomeScreen() {
             backgroundColor: colors.iconBackground,
             justifyContent: "center",
             alignItems: "center",
+            shadowColor: colors.accent,
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.3,
+            shadowRadius: 6,
+            elevation: 4,
         },
         photoButtonText: {
-            fontSize: 14,
+            fontSize: 15,
             color: colors.textPrimary,
-            fontWeight: "600",
+            fontWeight: "700",
         },
         uploadingContainer: {
             backgroundColor: colors.cardBackground,
@@ -261,41 +322,83 @@ export default function HomeScreen() {
             borderRadius: 4,
         },
         completedContainer: {
+            borderRadius: 20,
+            overflow: 'hidden',
             backgroundColor: colors.cardBackground,
-            borderRadius: 16,
-            padding: 32,
-            alignItems: "center",
-            shadowColor: colors.shadow,
-            shadowOffset: { width: 0, height: 2 },
-            shadowOpacity: 0.05,
-            shadowRadius: 8,
-            elevation: 2,
+            shadowColor: colors.accent,
+            shadowOffset: { width: 0, height: 6 },
+            shadowOpacity: 0.2,
+            shadowRadius: 12,
+            elevation: 6,
+            minHeight: 50,
+            maxHeight: 300,
         },
-        checkmarkCircle: {
-            width: 80,
-            height: 80,
-            borderRadius: 40,
-            backgroundColor: "#4ADE80",
-            justifyContent: "center",
+        completedContent: {
+            padding: 16,
             alignItems: "center",
-            marginBottom: 16,
+            justifyContent: "center",
+            flex: 1,
         },
         completedTitle: {
-            fontSize: 24,
-            color: colors.textPrimary,
-            fontWeight: "700",
-            marginBottom: 8,
+            fontSize: 22,
+            color: "#FFFFFF",
+            fontWeight: "800",
+            marginBottom: 4,
+            textAlign: "center",
+            textShadowColor: 'rgba(0, 0, 0, 0.5)',
+            textShadowOffset: { width: 0, height: 2 },
+            textShadowRadius: 4,
         },
         completedText: {
-            fontSize: 16,
-            color: colors.textSecondary,
-            textAlign: "center",
-            marginBottom: 4,
-        },
-        completedSubtext: {
             fontSize: 14,
-            color: colors.textTertiary,
+            color: "rgba(255, 255, 255, 0.9)",
             textAlign: "center",
+            fontWeight: "600",
+            marginBottom: 12,
+            textShadowColor: 'rgba(0, 0, 0, 0.5)',
+            textShadowOffset: { width: 0, height: 1 },
+            textShadowRadius: 2,
+        },
+        completionStatsRow: {
+            flexDirection: 'row',
+            justifyContent: 'center',
+            gap: 12,
+            marginTop: 6,
+            marginBottom: 8,
+        },
+        statBadge: {
+            backgroundColor: 'rgba(0, 0, 0, 0.6)',
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 10,
+            alignItems: 'center',
+            borderWidth: 1,
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+        },
+        statBadgeValue: {
+            color: '#FFFFFF',
+            fontSize: 15,
+            fontWeight: '700',
+        },
+        statBadgeLabel: {
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: 10,
+            marginTop: 1,
+        },
+        shareButton: {
+            marginTop: 8,
+            backgroundColor: '#FFFFFF',
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 24,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 6,
+        },
+        shareButtonText: {
+            color: colors.accent,
+            fontWeight: '700',
+            fontSize: 14,
         },
         quoteSection: {
             marginHorizontal: 20,
@@ -429,7 +532,7 @@ export default function HomeScreen() {
         thisMonth: 0,
         consistency: 0,
     });
-    const [userName, setUserName] = useState("Gaurav");
+    const [userName, setUserName] = useState("Friend");
     const [showFullCalendar, setShowFullCalendar] = useState(false);
     const [uploading, setUploading] = useState(false);
     const [isValidating, setIsValidating] = useState(false);
@@ -441,11 +544,14 @@ export default function HomeScreen() {
     const [showDateModal, setShowDateModal] = useState(false);
     const [workoutDates, setWorkoutDates] = useState<{ [key: string]: any }>({});
     const [loading, setLoading] = useState(true);
+    const [lastUploadedImage, setLastUploadedImage] = useState<string | null>(null);
     const [refreshing, setRefreshing] = useState(false);
 
-    useEffect(() => {
-        fetchInitialData();
-    }, []);
+    useFocusEffect(
+        useCallback(() => {
+            fetchInitialData();
+        }, [])
+    );
 
     const fetchInitialData = async () => {
         try {
@@ -456,7 +562,7 @@ export default function HomeScreen() {
             ]);
 
             if (profileRes.success && profileRes.data) {
-                setUserName(profileRes.data.name?.split(" ")[0] || "Gaurav");
+                setUserName(profileRes.data.name?.split(" ")[0] || "Friend");
             }
 
             if (statsRes.success && statsRes.data) {
@@ -477,8 +583,21 @@ export default function HomeScreen() {
                 // Mark today as selected if not in workout dates
                 const d = new Date();
                 const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+                // Check if today is already completed
+                const isTodayCompleted = dates && dates.includes(todayStr);
+                setTodayCompleted(!!isTodayCompleted);
+                setCanUpload(!isTodayCompleted);
+
                 if (!formattedDates[todayStr]) {
                     formattedDates[todayStr] = { selected: true, selectedColor: colors.calendarToday };
+                } else {
+                    // If today has a workout, combine styles (selected + workout)
+                    formattedDates[todayStr] = {
+                        ...formattedDates[todayStr],
+                        selected: true,
+                        selectedColor: colors.calendarToday
+                    };
                 }
                 setWorkoutDates(formattedDates);
             }
@@ -496,29 +615,20 @@ export default function HomeScreen() {
     };
 
     // Animation values
-    const streakScale = new Animated.Value(1);
-    const checkmarkScale = new Animated.Value(0);
+    const streakScale = useRef(new Animated.Value(1)).current;
+    const checkmarkScale = useRef(new Animated.Value(0)).current;
+    const fadeAnim = useRef(new Animated.Value(0)).current;
 
-    // Check if user can upload (1 hour cooldown)
+    // Check if user can upload (Daily limit)
     useEffect(() => {
         if (lastUploadTime) {
-            const oneHour = 60 * 60 * 1000;
-            const timePassed = Date.now() - lastUploadTime;
-
-            if (timePassed < oneHour) {
-                setCanUpload(false);
-                setTodayCompleted(true);
-
-                const remainingTime = oneHour - timePassed;
-                setTimeout(() => {
-                    setCanUpload(true);
-                    setTodayCompleted(false);
-                }, remainingTime);
-            }
+            // Simply update UI state, logic is mostly handled by initial fetch and handleUpload
+            // We just want to ensure we don't accidentally enable it if lastUploadTime changes
+            setTodayCompleted(true);
+            setCanUpload(false);
         }
     }, [lastUploadTime]);
 
-    // Animate streak on mount
     useEffect(() => {
         Animated.sequence([
             Animated.spring(streakScale, {
@@ -533,6 +643,25 @@ export default function HomeScreen() {
             }),
         ]).start();
     }, []);
+
+    // Animate completion card if today is completed
+    useEffect(() => {
+        if (todayCompleted) {
+            Animated.parallel([
+                Animated.spring(checkmarkScale, {
+                    toValue: 1,
+                    useNativeDriver: true,
+                    tension: 50,
+                    friction: 7,
+                }),
+                Animated.timing(fadeAnim, {
+                    toValue: 1,
+                    duration: 500,
+                    useNativeDriver: true,
+                })
+            ]).start();
+        }
+    }, [todayCompleted]);
 
     const getGreeting = () => {
         const hour = new Date().getHours();
@@ -586,13 +715,22 @@ export default function HomeScreen() {
                     setUploading(false);
                     setTodayCompleted(true);
                     setLastUploadTime(Date.now());
+                    setLastUploadedImage(imageUri);
                     setCanUpload(false);
 
-                    Animated.spring(checkmarkScale, {
-                        toValue: 1,
-                        useNativeDriver: true,
-                        tension: 50,
-                    }).start();
+                    Animated.parallel([
+                        Animated.spring(checkmarkScale, {
+                            toValue: 1,
+                            useNativeDriver: true,
+                            tension: 50,
+                            friction: 7,
+                        }),
+                        Animated.timing(fadeAnim, {
+                            toValue: 1,
+                            duration: 500,
+                            useNativeDriver: true,
+                        })
+                    ]).start();
 
                     setStreak(prev => prev + 1);
                     Animated.sequence([
@@ -606,8 +744,26 @@ export default function HomeScreen() {
                         }),
                     ]).start();
 
-                    // Refresh stats
-                    fetchInitialData();
+                    // Update stats locally instead of fetching to avoid race conditions with backend
+                    const d = new Date();
+                    const todayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+                    setWorkoutDates(prev => ({
+                        ...prev,
+                        [todayStr]: {
+                            ...prev[todayStr],
+                            selected: true,
+                            selectedColor: colors.calendarToday,
+                            marked: true,
+                            dotColor: colors.workoutMedium
+                        }
+                    }));
+
+                    setStats(prev => ({
+                        ...prev,
+                        thisMonth: prev.thisMonth + 1,
+                        consistency: Math.min(100, Math.round(((prev.thisMonth + 1) / 30) * 100))
+                    }));
                 }, 500);
             }
         } catch (error: any) {
@@ -758,7 +914,7 @@ export default function HomeScreen() {
     };
 
     const getWorkoutDataForDate = (dateString: string) => {
-        if (!workoutDates[dateString]?.marked) {
+        if (!workoutDates[dateString]?.marked && !workoutDates[dateString]?.selected) {
             return null;
         }
 
@@ -767,7 +923,7 @@ export default function HomeScreen() {
 
         return {
             date: dateString,
-            photoUploaded: true,
+            photoUploaded: workoutDates[dateString]?.marked || (workoutDates[dateString]?.selected && todayCompleted),
             workoutType: day % 2 === 0 ? "Strength Training" : "Cardio",
             duration: Math.floor(Math.random() * 30) + 30,
             calories: Math.floor(Math.random() * 300) + 200,
@@ -801,17 +957,24 @@ export default function HomeScreen() {
                 {/* Header */}
                 <View style={styles.header}>
                     <View style={styles.headerLeft}>
-                        <Text style={styles.greeting}>{getGreeting()} 👋</Text>
-                        <Text style={styles.userName}>Let's stay consistent, {userName}</Text>
+                        <Text style={styles.greeting}>{getGreeting()}</Text>
+                        <Text style={styles.userName}>{userName}</Text>
                     </View>
                     <Animated.View
                         style={[
-                            styles.streakBadge,
-                            { transform: [{ scale: streakScale }] }
+                            { transform: [{ scale: streakScale }] },
+                            { shadowColor: "#FF5E62", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }
                         ]}
                     >
-                        <Ionicons name="flame" size={24} color={colors.accent} />
-                        <Text style={styles.streakNumber}>{streak}</Text>
+                        <LinearGradient
+                            colors={['#FF9966', '#FF5E62']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 1 }}
+                            style={styles.streakBadge}
+                        >
+                            <Ionicons name="flame" size={20} color="#FFF" />
+                            <Text style={[styles.streakNumber, { color: '#FFF' }]}>{streak}</Text>
+                        </LinearGradient>
                     </Animated.View>
                 </View>
 
@@ -833,6 +996,8 @@ export default function HomeScreen() {
                         <Text style={styles.statLabel}>Consistency</Text>
                     </View>
                 </View>
+
+
 
                 {/* Calendar Section */}
                 <View style={styles.calendarSection}>
@@ -859,8 +1024,9 @@ export default function HomeScreen() {
                                 ];
                                 const dateNum = date.getDate();
                                 const isToday = dateNum === today && date.getMonth() === currentMonth;
-                                const dateString = date.toISOString().split('T')[0];
-                                const hasWorkout = workoutDates[dateString]?.marked;
+                                // Use local date string to match keys
+                                const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                                const hasWorkout = workoutDates[dateString]?.marked || workoutDates[dateString]?.selected;
 
                                 return (
                                     <View key={index} style={styles.dayContainer}>
@@ -924,36 +1090,67 @@ export default function HomeScreen() {
 
                 {/* Photo Upload Section */}
                 <View style={styles.photoSection}>
-                    <Text style={styles.sectionTitle}>Track Your Progress</Text>
-                    <Text style={styles.sectionSubtitle}>
-                        Upload your gym photos to see your transformation
+                    <Text style={[styles.sectionTitle, { fontSize: 20, marginBottom: 8 }]}>Daily Check-in</Text>
+                    <Text style={[styles.sectionSubtitle, { fontSize: 15, marginBottom: 20, color: colors.textSecondary, fontWeight: '600' }]}>
+                        📸 Snap a photo to keep your streak alive!
                     </Text>
 
-                    {uploading ? (
+                    {uploading || loading ? (
                         <View style={styles.uploadingContainer}>
                             <ActivityIndicator size="large" color={colors.accent} />
-                            <Text style={styles.uploadingText}>Uploading... {uploadProgress}%</Text>
-                            <View style={styles.progressBarContainer}>
-                                <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
-                            </View>
+                            <Text style={styles.uploadingText}>
+                                {uploading ? `Uploading... ${uploadProgress}%` : "Loading status..."}
+                            </Text>
+                            {uploading && (
+                                <View style={styles.progressBarContainer}>
+                                    <View style={[styles.progressBar, { width: `${uploadProgress}%` }]} />
+                                </View>
+                            )}
                         </View>
                     ) : todayCompleted && !canUpload ? (
                         <Animated.View
                             style={[
                                 styles.completedContainer,
-                                { transform: [{ scale: checkmarkScale }] }
+                                {
+                                    transform: [{ scale: checkmarkScale }],
+                                    opacity: fadeAnim
+                                }
                             ]}
                         >
-                            <View style={styles.checkmarkCircle}>
-                                <Ionicons name="checkmark" size={48} color={colors.textWhite} />
-                            </View>
-                            <Text style={styles.completedTitle}>Great Job! 🎉</Text>
-                            <Text style={styles.completedText}>
-                                You've logged your workout for today!
-                            </Text>
-                            <Text style={styles.completedSubtext}>
-                                Come back tomorrow to continue your streak
-                            </Text>
+                            <ImageBackground
+                                source={lastUploadedImage ? { uri: lastUploadedImage } : { uri: "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=1470&auto=format&fit=crop" }}
+                                style={{ width: '100%', height: '100%', minHeight: 180 }}
+                                imageStyle={{ borderRadius: 20 }}
+                            >
+                                <LinearGradient
+                                    colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.8)']}
+                                    style={styles.completedContent}
+                                >
+                                    <View style={{ marginBottom: 10 }}>
+                                        <Ionicons name="checkmark-circle" size={48} color="#4ADE80" />
+                                    </View>
+
+                                    <Text style={styles.completedTitle}>Workout Crushed!</Text>
+                                    <Text style={styles.completedText}>You're one step closer to your goal.</Text>
+
+                                    <View style={styles.completionStatsRow}>
+
+                                        <View style={styles.statBadge}>
+                                            <Text style={styles.statBadgeValue}>+1 Day</Text>
+                                            <Text style={styles.statBadgeLabel}>Streak</Text>
+                                        </View>
+                                    </View>
+
+                                    <TouchableOpacity
+                                        style={styles.shareButton}
+                                        onPress={() => router.push('/calories')}
+                                        activeOpacity={0.8}
+                                    >
+                                        <Ionicons name="flame" size={18} color={colors.accent} />
+                                        <Text style={styles.shareButtonText}>Track Calories</Text>
+                                    </TouchableOpacity>
+                                </LinearGradient>
+                            </ImageBackground>
                         </Animated.View>
                     ) : (
                         <View style={styles.photoButtons}>
@@ -974,6 +1171,7 @@ export default function HomeScreen() {
                                 <Text style={styles.photoButtonText}>Upload Photo</Text>
                             </TouchableOpacity>
                         </View>
+
                     )}
                 </View>
 
