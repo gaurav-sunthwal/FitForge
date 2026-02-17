@@ -382,6 +382,109 @@ export class NotificationService {
         if (hasPermission) {
             const settings = await this.getSettings();
             await this.scheduleAllNotifications(settings);
+            // Register device token with backend
+            await this.registerDeviceToken();
+        }
+    }
+
+    /**
+     * Get Expo Push Token
+     */
+    static async getExpoPushToken(): Promise<string | null> {
+        try {
+            if (!Device.isDevice) {
+                console.log('Must use physical device for Push Notifications');
+                return null;
+            }
+
+            const token = await Notifications.getExpoPushTokenAsync({
+                projectId: '2e37e596-0347-4026-bf2c-ff9782fbc0a0',
+            });
+
+            return token.data;
+        } catch (error) {
+            console.error('Error getting Expo push token:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Register device token with backend
+     */
+    static async registerDeviceToken(): Promise<boolean> {
+        try {
+            const pushToken = await this.getExpoPushToken();
+            
+            if (!pushToken) {
+                console.log('No push token available');
+                return false;
+            }
+
+            const authToken = await AsyncStorage.getItem('authToken');
+            const apiUrl = await AsyncStorage.getItem('apiUrl');
+
+            if (!authToken || !apiUrl) {
+                console.log('No auth token or API URL available');
+                return false;
+            }
+
+            const response = await fetch(`${apiUrl}/api/v1/device-token`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({
+                    token: pushToken,
+                    platform: Platform.OS,
+                }),
+            });
+
+            if (!response.ok) {
+                console.error('Failed to register device token');
+                return false;
+            }
+
+            console.log('Device token registered successfully');
+            return true;
+        } catch (error) {
+            console.error('Error registering device token:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Unregister device token from backend (on logout)
+     */
+    static async unregisterDeviceToken(): Promise<void> {
+        try {
+            const pushToken = await this.getExpoPushToken();
+            
+            if (!pushToken) {
+                return;
+            }
+
+            const authToken = await AsyncStorage.getItem('authToken');
+            const apiUrl = await AsyncStorage.getItem('apiUrl');
+
+            if (!authToken || !apiUrl) {
+                return;
+            }
+
+            await fetch(`${apiUrl}/api/v1/device-token`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${authToken}`,
+                },
+                body: JSON.stringify({
+                    token: pushToken,
+                }),
+            });
+
+            console.log('Device token unregistered');
+        } catch (error) {
+            console.error('Error unregistering device token:', error);
         }
     }
 }

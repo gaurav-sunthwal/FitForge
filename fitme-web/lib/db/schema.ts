@@ -81,3 +81,43 @@ export const progressPhotos = pgTable('progress_photos', {
     caption: text('caption'),
     timestamp: timestamp('timestamp').defaultNow().notNull(),
 });
+
+export const admins = pgTable('admins', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').unique().notNull(),
+    password: text('password').notNull(), // hashed password
+    name: text('name').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const notifications = pgTable('notifications', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    body: text('body').notNull(),
+    imageUrl: text('image_url'), // Optional image for rich notifications
+    actionUrl: text('action_url'), // Optional deep link or URL
+    sentBy: uuid('sent_by').references(() => admins.id), // Which admin sent it
+    sentAt: timestamp('sent_at').defaultNow().notNull(),
+    scheduledFor: timestamp('scheduled_for'), // For scheduled notifications
+    status: text('status').default('sent'), // sent, scheduled, failed
+    recipientCount: integer('recipient_count').default(0), // How many users received it
+});
+
+export const userNotifications = pgTable('user_notifications', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id).notNull(),
+    notificationId: uuid('notification_id').references(() => notifications.id).notNull(),
+    read: integer('read').default(0), // 0 for unread, 1 for read
+    readAt: timestamp('read_at'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
+export const deviceTokens = pgTable('device_tokens', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id).notNull(),
+    token: text('token').notNull().unique(),
+    platform: text('platform').notNull(), // 'ios' or 'android'
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
