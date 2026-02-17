@@ -1,5 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import React from "react";
 import {
     Dimensions,
@@ -20,7 +20,12 @@ const { width, height } = Dimensions.get("window");
 export default function WelcomeScreen() {
     const router = useRouter();
     const { colors } = useTheme();
-    const { completeOnboarding } = useAuth();
+    const { completeOnboarding, isAuthenticated } = useAuth();
+
+    // If user is already authenticated, redirect to home
+    if (isAuthenticated) {
+        return <Redirect href="/(tabs)" />;
+    }
 
     const handleGetStarted = async () => {
         // await completeOnboarding(); // Don't complete yet, wait for register success

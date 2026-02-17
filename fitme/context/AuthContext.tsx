@@ -34,6 +34,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 AsyncStorage.getItem("userToken"),
             ]);
 
+            console.log("🔍 Loading auth state from storage:");
+            console.log("  - isAuthenticated:", authStatus);
+            console.log("  - hasSeenOnboarding:", onboardingStatus);
+            console.log("  - userId:", savedUserId);
+            console.log("  - userToken:", savedToken ? "exists" : "null");
+
             setIsAuthenticated(authStatus === "true");
             setHasSeenOnboarding(onboardingStatus === "true");
             setUserId(savedUserId);
@@ -47,6 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const login = async (id: string, token: string) => {
         try {
+            console.log("💾 Saving auth state to storage:");
+            console.log("  - userId:", id);
+            console.log("  - token:", token ? "exists" : "null");
+
             await Promise.all([
                 AsyncStorage.setItem("isAuthenticated", "true"),
                 AsyncStorage.setItem("userId", id),
@@ -55,6 +65,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUserId(id);
             setUserToken(token);
             setIsAuthenticated(true);
+
+            console.log("✅ Auth state saved successfully");
         } catch (error) {
             console.error("Error during login:", error);
         }

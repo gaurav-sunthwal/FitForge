@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
@@ -21,12 +21,17 @@ import { api } from "../../utils/api";
 export default function RegisterScreen() {
     const router = useRouter();
     const { colors } = useTheme();
-    const { login } = useAuth();
+    const { login, isAuthenticated } = useAuth();
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // If user is already authenticated, redirect to home
+    if (isAuthenticated) {
+        return <Redirect href="/(tabs)" />;
+    }
 
     const handleRegister = async () => {
         if (!name || !email || !password) {

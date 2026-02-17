@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { Redirect, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
     ActivityIndicator,
@@ -25,11 +25,16 @@ const { width } = Dimensions.get("window");
 export default function LoginScreen() {
     const router = useRouter();
     const { colors, isDark } = useTheme();
-    const { login } = useAuth();
+    const { login, isAuthenticated } = useAuth();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // If user is already authenticated, redirect to home
+    if (isAuthenticated) {
+        return <Redirect href="/(tabs)" />;
+    }
 
     const handleLogin = async () => {
         if (!email) {
