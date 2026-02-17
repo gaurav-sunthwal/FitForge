@@ -132,6 +132,41 @@ export default function AdminDashboard() {
         }
     };
 
+    const handleDeleteNotification = async (id: string) => {
+        if (!window.confirm('Are you sure you want to delete this notification? This will also remove it from users\' history.')) {
+            return;
+        }
+
+        const token = localStorage.getItem('adminToken');
+        if (!token) {
+            router.push('/admin/login');
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/v1/admin/notifications?id=${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const data = await response.json();
+                setError(data.error || 'Failed to delete notification');
+                return;
+            }
+
+            setSuccess('Notification deleted successfully');
+            // Refresh list
+            fetchNotifications(token);
+            setTimeout(() => setSuccess(''), 5000);
+        } catch (error) {
+            console.error('Error deleting notification:', error);
+            setError('An error occurred while deleting notification');
+        }
+    };
+
     return (
         <div className="min-h-screen bg-linear-to-br from-slate-900 via-purple-900 to-slate-900">
             {/* Header */}
@@ -317,10 +352,19 @@ export default function AdminDashboard() {
                                                 <span>📅 {new Date(notification.sentAt).toLocaleString()}</span>
                                             </div>
                                         </div>
-                                        <div className="ml-4">
+                                        <div className="ml-4 flex flex-col items-end space-y-2">
                                             <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-500/20 text-green-200 border border-green-500/30">
                                                 ✓ Sent
                                             </span>
+                                            <button
+                                                onClick={() => handleDeleteNotification(notification.id)}
+                                                className="text-red-400 hover:text-red-300 transition-colors p-2 rounded-lg hover:bg-red-500/10"
+                                                title="Delete Notification"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                </svg>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>

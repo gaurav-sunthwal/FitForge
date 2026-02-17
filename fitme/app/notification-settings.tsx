@@ -568,13 +568,47 @@ export default function NotificationSettingsScreen() {
                     </View>
                 </View>
 
-                {/* Test Notification */}
-                <TouchableOpacity
-                    style={styles.testButton}
-                    onPress={handleTestNotification}
-                >
-                    <Text style={styles.testButtonText}>Test in 1 Minute</Text>
-                </TouchableOpacity>
+                {/* Test Notification Section */}
+                <View style={styles.section}>
+                    <View style={styles.sectionHeader}>
+                        <Ionicons name="notifications" size={24} color={colors.accent} />
+                        <Text style={styles.sectionTitle}>Test Notifications</Text>
+                    </View>
+                    <Text style={styles.sectionDescription}>
+                        Test if notifications are working correctly on your device.
+                    </Text>
+
+                    {/* Instant Test Button */}
+                    <TouchableOpacity
+                        style={[styles.testButton, { backgroundColor: '#4CAF50' }]}
+                        onPress={async () => {
+                            try {
+                                await NotificationService.sendImmediateNotification(
+                                    "🎉 Test Notification",
+                                    "Instant notifications are working! This appeared immediately."
+                                );
+                                Alert.alert(
+                                    "Sent!",
+                                    "Check your notification bar. The notification should appear instantly.",
+                                    [{ text: "OK" }]
+                                );
+                            } catch (error) {
+                                console.error("Error sending instant test:", error);
+                                Alert.alert("Error", "Failed to send instant notification");
+                            }
+                        }}
+                    >
+                        <Text style={styles.testButtonText}>⚡ Send Test Notification Now</Text>
+                    </TouchableOpacity>
+
+                    {/* Scheduled Test Button */}
+                    <TouchableOpacity
+                        style={[styles.testButton, { marginTop: 12 }]}
+                        onPress={handleTestNotification}
+                    >
+                        <Text style={styles.testButtonText}>⏰ Test in 1 Minute (Scheduled)</Text>
+                    </TouchableOpacity>
+                </View>
             </ScrollView>
 
             {/* Time Picker */}

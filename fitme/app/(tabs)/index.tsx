@@ -960,22 +960,42 @@ export default function HomeScreen() {
                         <Text style={styles.greeting}>{getGreeting()}</Text>
                         <Text style={styles.userName}>{userName}</Text>
                     </View>
-                    <Animated.View
-                        style={[
-                            { transform: [{ scale: streakScale }] },
-                            { shadowColor: "#FF5E62", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }
-                        ]}
-                    >
-                        <LinearGradient
-                            colors={['#FF9966', '#FF5E62']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 1 }}
-                            style={styles.streakBadge}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                        {/* Notifications Bell */}
+                        <TouchableOpacity
+                            onPress={() => router.push('/notifications-inbox')}
+                            style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 22,
+                                backgroundColor: colors.iconBackground,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                borderWidth: 1.5,
+                                borderColor: colors.border,
+                            }}
                         >
-                            <Ionicons name="flame" size={20} color="#FFF" />
-                            <Text style={[styles.streakNumber, { color: '#FFF' }]}>{streak}</Text>
-                        </LinearGradient>
-                    </Animated.View>
+                            <Ionicons name="notifications" size={22} color={colors.accent} />
+                        </TouchableOpacity>
+
+                        {/* Streak Badge */}
+                        <Animated.View
+                            style={[
+                                { transform: [{ scale: streakScale }] },
+                                { shadowColor: "#FF5E62", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 }
+                            ]}
+                        >
+                            <LinearGradient
+                                colors={['#FF9966', '#FF5E62']}
+                                start={{ x: 0, y: 0 }}
+                                end={{ x: 1, y: 1 }}
+                                style={styles.streakBadge}
+                            >
+                                <Ionicons name="flame" size={20} color="#FFF" />
+                                <Text style={[styles.streakNumber, { color: '#FFF' }]}>{streak}</Text>
+                            </LinearGradient>
+                        </Animated.View>
+                    </View>
                 </View>
 
                 {/* Weekly Stats Cards */}

@@ -166,3 +166,52 @@ export async function GET(request: NextRequest) {
         );
     }
 }
+// DELETE: Delete a past notification
+export async function DELETE(request: NextRequest) {
+    try {
+        const adminId = verifyAdminToken(request);
+        const { searchParams } = new URL(request.url);
+        const notificationId = searchParams.get('id');
+
+        if (!notificationId) {
+            return NextResponse.json(
+                { error: 'Notification ID is required' },
+                { status: 400 }
+            );
+        }
+
+        // 1. Delete user notifications first
+        await db.delete(userNotifications).where(eq(userNotifications.notificationId, notificationId));
+
+        // 2. Delete the main notification
+        const result = await db.delete(notifications)
+            .where(eq(notifications.id, notificationId))
+            .returning();
+
+        if (result.length === 0) {
+            return NextResponse.json(
+                { error: 'Notification not found' },
+                { status: 404 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: 'Notification deleted successfully',
+        });
+    } catch (error: any) {
+        console.error('Delete notification error:', error);
+        
+        if (error.message && error.message.includes('Unauthorized')) {
+            return NextResponse.json(
+                { error: error.message },
+                { status: 401 }
+            );
+        }
+        
+        return NextResponse.json(
+            { error: 'Internal server error' },
+            { status: 500 }
+        );
+    }
+}

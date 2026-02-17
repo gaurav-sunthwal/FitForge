@@ -2,6 +2,7 @@ import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { BASE_URL } from './api';
 
 // Configure how notifications should be handled when app is in foreground
 // Note: Notifications scheduled with this service work in ALL app states:
@@ -420,19 +421,18 @@ export class NotificationService {
                 return false;
             }
 
-            const authToken = await AsyncStorage.getItem('authToken');
-            const apiUrl = await AsyncStorage.getItem('apiUrl');
+            const userToken = await AsyncStorage.getItem('userToken');
 
-            if (!authToken || !apiUrl) {
-                console.log('No auth token or API URL available');
+            if (!userToken) {
+                console.log('No auth token available');
                 return false;
             }
 
-            const response = await fetch(`${apiUrl}/api/v1/device-token`, {
+            const response = await fetch(`${BASE_URL}/device-token`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
+                    'Authorization': `Bearer ${userToken}`,
                 },
                 body: JSON.stringify({
                     token: pushToken,
@@ -464,18 +464,17 @@ export class NotificationService {
                 return;
             }
 
-            const authToken = await AsyncStorage.getItem('authToken');
-            const apiUrl = await AsyncStorage.getItem('apiUrl');
+            const userToken = await AsyncStorage.getItem('userToken');
 
-            if (!authToken || !apiUrl) {
+            if (!userToken) {
                 return;
             }
 
-            await fetch(`${apiUrl}/api/v1/device-token`, {
+            await fetch(`${BASE_URL}/device-token`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${authToken}`,
+                    'Authorization': `Bearer ${userToken}`,
                 },
                 body: JSON.stringify({
                     token: pushToken,
