@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { NotificationService } from "../utils/notificationService";
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -44,6 +45,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setHasSeenOnboarding(onboardingStatus === "true");
             setUserId(savedUserId);
             setUserToken(savedToken);
+
+            // Register device token if already authenticated
+            if (authStatus === "true" && savedToken) {
+                NotificationService.registerDeviceToken().catch(console.error);
+            }
         } catch (error) {
             console.error("Error loading auth state:", error);
         } finally {
@@ -67,6 +73,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setIsAuthenticated(true);
 
             console.log("✅ Auth state saved successfully");
+
+            // Register device token right after login
+            NotificationService.registerDeviceToken().catch(console.error);
         } catch (error) {
             console.error("Error during login:", error);
         }
@@ -74,6 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const logout = async () => {
         try {
+            // Unregister device token before logout
+            await NotificationService.unregisterDeviceToken().catch(console.error);
+
             await AsyncStorage.multiRemove(["isAuthenticated", "userId", "userToken"]);
             setUserId(null);
             setUserToken(null);

@@ -1,30 +1,31 @@
 "use client"
 import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 
 const features = [
     {
-        id: 'goals',
-        label: 'Plan Goals',
-        title: 'Smart Goals',
-        description: 'Set personalized weight targets, calorie ceilings, and weekly workout frequencies tailored to your body.'
+        id: 'ai-vision',
+        label: 'AI Vision',
+        title: 'Nutritional Intelligence',
+        description: 'Snap a photo of your meal and let Gemini AI break down calories, protein, and macros with surgical precision.'
     },
     {
-        id: 'consistency',
-        label: 'Challenges',
-        title: 'Consistency tracking',
-        description: 'Turn discipline into a habit with streak tracking and visual calendars that celebrate every workout.'
+        id: 'analytics',
+        label: 'Analytics',
+        title: 'Data-Driven Growth',
+        description: 'Track your volume, sets, and personal bests with interactive charts that show your evolution over time.'
+    },
+    {
+        id: 'psychology',
+        label: 'Reminders',
+        title: 'Habit Mastery',
+        description: 'Our smart notification system uses behavioral psychology to nudge you exactly when you need it most.'
     },
     {
         id: 'themes',
-        label: 'Themes',
-        title: 'Sleek Themes',
-        description: 'Experience the app with a sleek, premium design tailored for a high-end feel.'
-    },
-    {
-        id: 'ai',
-        label: 'AI Analysis',
-        title: 'AI Analysis',
-        description: 'Leverage Gemini AI to analyze your meal photos and get instant nutritional insights (Protein, Calories, Macros).'
+        label: 'Custom UI',
+        title: 'Aesthetic Fitness',
+        description: 'Switch between Dark, Light, and Custom themes that match your style and keep you focused.'
     }
 ];
 
@@ -32,16 +33,16 @@ const FeatureHighlights = () => {
     const [activeTab, setActiveTab] = useState(features[0].id);
 
     return (
-        <section className="py-20 bg-background">
+        <section className="py-24 bg-white">
             <div className="container mx-auto px-6">
-                <div className="flex flex-wrap justify-center gap-4 mb-12">
+                <div className="flex flex-wrap justify-center gap-3 mb-16">
                     {features.map((feature) => (
                         <button
                             key={feature.id}
                             onClick={() => setActiveTab(feature.id)}
-                            className={`px-6 py-2.5 rounded-full text-sm font-semibold transition-all ${activeTab === feature.id
-                                ? 'bg-foreground text-background shadow-lg'
-                                : 'bg-foreground/5 text-foreground/60 hover:bg-foreground/10'
+                            className={`px-8 py-3 rounded-2xl text-sm font-bold transition-all duration-300 ${activeTab === feature.id
+                                ? 'bg-foreground text-background shadow-xl scale-105'
+                                : 'bg-foreground/5 text-foreground/40 hover:bg-foreground/10 hover:text-foreground'
                                 }`}
                         >
                             {feature.label}
@@ -49,17 +50,23 @@ const FeatureHighlights = () => {
                     ))}
                 </div>
 
-                <div className="max-w-3xl mx-auto text-center transition-all duration-500">
+                <div className="max-w-4xl mx-auto text-center">
                     {features.map((feature) => (
-                        <div
+                        <motion.div
                             key={feature.id}
-                            className={`${activeTab === feature.id ? 'block opacity-100 translate-y-0' : 'hidden opacity-0 translate-y-4'} transition-all duration-500`}
+                            initial={{ opacity: 0, scale: 0.98 }}
+                            animate={{
+                                opacity: activeTab === feature.id ? 1 : 0,
+                                scale: activeTab === feature.id ? 1 : 0.98,
+                                display: activeTab === feature.id ? 'block' : 'none'
+                            }}
+                            transition={{ duration: 0.4 }}
                         >
-                            <h3 className="text-3xl font-bold mb-4 text-foreground">{feature.title}</h3>
-                            <p className="text-xl text-foreground/60 leading-relaxed">
+                            <h3 className="text-3xl md:text-4xl font-black mb-6 text-foreground tracking-tight">{feature.title}</h3>
+                            <p className="text-lg md:text-xl text-foreground/50 leading-relaxed font-medium">
                                 {feature.description}
                             </p>
-                        </div>
+                        </motion.div>
                     ))}
                 </div>
             </div>
