@@ -44,6 +44,8 @@ const DEFAULT_SETTINGS: NotificationSettings = {
 
 const STORAGE_KEY = 'notification_settings';
 const NOTIFICATION_IDS_KEY = 'scheduled_notification_ids';
+const WATER_CATEGORY = 'water-log';
+const WATER_ACTION_ID = 'add-glass';
 
 export class NotificationService {
     /**
@@ -67,6 +69,17 @@ export class NotificationService {
             console.log('Failed to get push token for push notification!');
             return false;
         }
+
+        // Define notification categories
+        await Notifications.setNotificationCategoryAsync(WATER_CATEGORY, [
+            {
+                identifier: WATER_ACTION_ID,
+                buttonTitle: '💧 Add 1 Glass',
+                options: {
+                    opensAppToForeground: false, // Don't bring the app to foreground
+                },
+            },
+        ]);
 
         // Configure Android channels for reliable notifications in all app states
         // These notifications will work even when app is closed/background
@@ -167,7 +180,7 @@ export class NotificationService {
      */
     static async scheduleAllNotifications(settings?: NotificationSettings): Promise<void> {
         const notificationSettings = settings || await this.getSettings();
-        
+
         // Cancel existing notifications first
         await this.cancelAllNotifications();
 
@@ -184,7 +197,7 @@ export class NotificationService {
             const breakfastId = await this.scheduleMealReminder('breakfast', notificationSettings.breakfastTime);
             const lunchId = await this.scheduleMealReminder('lunch', notificationSettings.lunchTime);
             const dinnerId = await this.scheduleMealReminder('dinner', notificationSettings.dinnerTime);
-            
+
             if (breakfastId) scheduledIds.push(breakfastId);
             if (lunchId) scheduledIds.push(lunchId);
             if (dinnerId) scheduledIds.push(dinnerId);
@@ -206,7 +219,7 @@ export class NotificationService {
     private static async scheduleGymSelfieReminder(time: string): Promise<string | null> {
         try {
             const [hours, minutes] = time.split(':').map(Number);
-            
+
             const identifier = await Notifications.scheduleNotificationAsync({
                 content: {
                     title: "💪 Time for Your Gym Selfie!",
@@ -237,7 +250,7 @@ export class NotificationService {
     private static async scheduleMealReminder(mealType: 'breakfast' | 'lunch' | 'dinner', time: string): Promise<string | null> {
         try {
             const [hours, minutes] = time.split(':').map(Number);
-            
+
             const mealEmojis = {
                 breakfast: '🍳',
                 lunch: '🥗',
@@ -285,12 +298,12 @@ export class NotificationService {
      */
     private static async scheduleWaterReminders(intervalHours: number): Promise<string[]> {
         const identifiers: string[] = [];
-        
+
         try {
             // Schedule water reminders from 8 AM to 10 PM
             const startHour = 8;
             const endHour = 22;
-            
+
             for (let hour = startHour; hour <= endHour; hour += intervalHours) {
                 const identifier = await Notifications.scheduleNotificationAsync({
                     content: {
@@ -300,6 +313,7 @@ export class NotificationService {
                         priority: Notifications.AndroidNotificationPriority.DEFAULT,
                         vibrate: [0, 250],
                         data: { type: 'water-reminder' },
+                        categoryIdentifier: WATER_CATEGORY,
                     },
                     trigger: {
                         type: Notifications.SchedulableTriggerInputTypes.DAILY,
@@ -308,7 +322,7 @@ export class NotificationService {
                         channelId: Platform.OS === 'android' ? 'water-reminders' : undefined,
                     },
                 });
-                
+
                 identifiers.push(identifier);
             }
         } catch (error) {
@@ -344,7 +358,7 @@ export class NotificationService {
         try {
             const now = new Date();
             const testTime = new Date(now.getTime() + 60 * 1000); // 1 minute from now
-            
+
             await Notifications.scheduleNotificationAsync({
                 content: {
                     title: "🎉 Test Notification",
@@ -360,7 +374,7 @@ export class NotificationService {
                     channelId: Platform.OS === 'android' ? 'default' : undefined,
                 },
             });
-            
+
             console.log(`Test notification scheduled for: ${testTime.toLocaleTimeString()}`);
         } catch (error) {
             console.error('Error scheduling test notification:', error);
@@ -385,6 +399,27 @@ export class NotificationService {
             await this.scheduleAllNotifications(settings);
             // Register device token with backend
             await this.registerDeviceToken();
+
+            // Register background response listener
+            Notifications.addNotificationResponseReceivedListener(async (response) => {
+                const { actionIdentifier, notification } = response;
+
+                if (actionIdentifier === WATER_ACTION_ID) {
+                    try {
+                        // Quick log water without opening app UI fully
+                        const today = new Date().toISOString().split('T')[0];
+
+                        // Import api dynamically or use fetch directly to avoid circular deps if any
+                        const { api } = require('./api');
+                        await api.nutrition.logWater(1, today);
+
+                        // Show a small feedback if possible (though limited in background)
+                        console.log('Water logged via notification action successfully');
+                    } catch (error) {
+                        console.error('Error logging water via action:', error);
+                    }
+                }
+            });
         }
     }
 
@@ -415,7 +450,7 @@ export class NotificationService {
     static async registerDeviceToken(): Promise<boolean> {
         try {
             const pushToken = await this.getExpoPushToken();
-            
+
             if (!pushToken) {
                 console.log('No push token available');
                 return false;
@@ -459,7 +494,7 @@ export class NotificationService {
     static async unregisterDeviceToken(): Promise<void> {
         try {
             const pushToken = await this.getExpoPushToken();
-            
+
             if (!pushToken) {
                 return;
             }

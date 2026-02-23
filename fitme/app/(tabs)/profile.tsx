@@ -128,16 +128,19 @@ export default function ProfileScreen() {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 1,
+            quality: 0.7, // Reduced quality for base64 storage
+            base64: true,
         });
 
         if (!result.canceled) {
             const newImageUri = result.assets[0].uri;
+            const base64 = result.assets[0].base64;
             setProfileImage(newImageUri);
 
             try {
-                // Update on backend
-                await api.user.updateProfile({ profileImage: newImageUri });
+                // Update on backend with base64 data to ensure it works everywhere
+                const photoData = base64 ? `data:image/jpeg;base64,${base64}` : newImageUri;
+                await api.user.updateProfile({ profileImage: photoData });
 
                 const savedInfo = await AsyncStorage.getItem("personalInfo");
                 const info = savedInfo ? JSON.parse(savedInfo) : {};

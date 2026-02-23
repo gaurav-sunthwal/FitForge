@@ -280,11 +280,14 @@ export default function PersonalInfoScreen() {
             mediaTypes: ImagePicker.MediaTypeOptions.Images,
             allowsEditing: true,
             aspect: [1, 1],
-            quality: 1,
+            quality: 0.7,
+            base64: true,
         });
 
         if (!result.canceled) {
-            setInfo((prev) => ({ ...prev, profileImage: result.assets[0].uri }));
+            const base64 = result.assets[0].base64;
+            const photoData = base64 ? `data:image/jpeg;base64,${base64}` : result.assets[0].uri;
+            setInfo((prev) => ({ ...prev, profileImage: photoData }));
         }
     };
 

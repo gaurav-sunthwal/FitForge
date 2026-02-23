@@ -1,8 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
- export const BASE_URL = 'https://fitme-gaurav.vercel.app/api/v1';
+// export const BASE_URL = 'http://10.130.2.241:3000/api/v1';
 // export const BASE_URL = 'http://localhost:3000/api/v1';
-// export const BASE_URL = true ? 'http://10.200.64.241:3000/api/v1' : 'https://fitme-gaurav.vercel.app/api/v1';
+ export const BASE_URL = 'https://fitme-gaurav.vercel.app/api/v1';
+
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const url = `${BASE_URL}${endpoint}`;
@@ -114,6 +115,21 @@ export const api = {
         testApiKey: (apiKey: string) => request<any>('/ai/test-key', {
             method: 'POST',
             body: JSON.stringify({ apiKey }),
+        }),
+        getWorkoutPlan: () => request<any>('/ai/workout-plan'),
+        generateWeeklyPlan: () => request<any>('/ai/generate-weekly-plan', {
+            method: 'POST'
+        }),
+        updateApiKey: (apiKey: string) => request<any>('/user/api-key', {
+            method: 'POST',
+            body: JSON.stringify({ apiKey }),
+        }),
+    },
+    // Invitation APIs
+    invitations: {
+        create: (referrerId: string, inviteCode?: string) => request<any>('/invitations', {
+            method: 'POST',
+            body: JSON.stringify({ referrerId, inviteCode }),
         }),
     },
 };

@@ -1,9 +1,41 @@
 "use client"
-import React from 'react';
-import { motion } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
+import { Loader2, CheckCircle2, ArrowRight } from 'lucide-react';
 
 const DownloadSection = () => {
+    const [email, setEmail] = useState('');
+    const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+    const [message, setMessage] = useState('');
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!email) return;
+
+        setStatus('loading');
+        try {
+            const res = await fetch('/api/v1/early-access', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setStatus('success');
+                setEmail('');
+            } else {
+                setStatus('error');
+                setMessage(data.error || 'Something went wrong');
+                setTimeout(() => setStatus('idle'), 3000);
+            }
+        } catch (err) {
+            setStatus('error');
+            setMessage('Failed to join');
+            setTimeout(() => setStatus('idle'), 3000);
+        }
+    };
+
     return (
         <section id="download" className="py-24 bg-white overflow-hidden relative">
             <div className="container mx-auto px-6">
@@ -15,44 +47,75 @@ const DownloadSection = () => {
                     <div className="flex flex-col lg:flex-row items-center gap-16 relative z-10">
                         <div className="lg:w-1/2 space-y-8">
                             <span className="inline-block px-4 py-1.5 text-[10px] font-black tracking-[0.2em] uppercase bg-white/10 text-white/60 rounded-full border border-white/5 backdrop-blur-sm">
-                                Available Now
+                                Early Access
                             </span>
                             <h2 className="text-4xl md:text-7xl font-black text-white leading-[0.9] tracking-tighter">
-                                Start Your<br />
-                                <span className="text-white/20 italic">Evolution</span> Today.
+                                Join The<br />
+                                <span className="text-white/20 italic">Inner Circle</span> Today.
                             </h2>
                             <p className="text-white/40 max-w-sm text-lg font-medium leading-relaxed">
-                                Join over 50k+ athletes redefining their limits. Download FitMe and take control of your performance.
+                                FitMe is currently in invitation-only mode. Register below to secure your spot and receive a download link when we launch.
                             </p>
 
-                            <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                                <button className="hover:scale-105 transition-all active:scale-95 group/btn relative w-44 h-14">
-                                    <Image
-                                        src="/images/appstore.png"
-                                        alt="Download on App Store"
-                                        fill
-                                        className="object-contain"
+                            <div className="pt-4 max-w-md">
+                                <form onSubmit={handleSubmit} className="relative group/form">
+                                    <input
+                                        type="email"
+                                        placeholder="Enter your email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        disabled={status === 'loading' || status === 'success'}
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-5 px-6 text-white placeholder:text-white/20 focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all disabled:opacity-50"
+                                        required
                                     />
-                                </button>
-                                <button className="hover:scale-105 transition-all active:scale-95 group/btn relative w-44 h-14">
-                                    <Image
-                                        src="/images/playstore.png"
-                                        alt="Get it on Play Store"
-                                        fill
-                                        className="object-contain"
-                                    />
-                                </button>
+                                    <button
+                                        type="submit"
+                                        disabled={status === 'loading' || status === 'success'}
+                                        className="absolute right-2 top-2 bottom-2 px-8 bg-blue-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest hover:bg-blue-500 transition-all flex items-center gap-2 group/btn disabled:bg-zinc-800 disabled:text-zinc-500"
+                                    >
+                                        {status === 'loading' ? (
+                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                        ) : status === 'success' ? (
+                                            <CheckCircle2 className="w-4 h-4" />
+                                        ) : (
+                                            <>
+                                                Join Now
+                                                <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
+                                            </>
+                                        )}
+                                    </button>
+                                </form>
+                                <AnimatePresence>
+                                    {status === 'success' && (
+                                        <motion.p
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="text-green-400 text-xs font-bold mt-4 tracking-widest uppercase"
+                                        >
+                                            Welcome to the evolution. Check your email.
+                                        </motion.p>
+                                    )}
+                                    {status === 'error' && (
+                                        <motion.p
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="text-red-400 text-xs font-bold mt-4 tracking-widest uppercase"
+                                        >
+                                            {message}
+                                        </motion.p>
+                                    )}
+                                </AnimatePresence>
                             </div>
 
                             <div className="flex items-center gap-6 pt-8 border-t border-white/10">
                                 <div>
-                                    <p className="text-2xl font-black text-white tracking-tighter">4.9/5</p>
-                                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">App Store Rating</p>
+                                    <p className="text-2xl font-black text-white tracking-tighter">1.2k+</p>
+                                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">On Waitlist</p>
                                 </div>
                                 <div className="w-px h-8 bg-white/10"></div>
                                 <div>
-                                    <p className="text-2xl font-black text-white tracking-tighter">10M+</p>
-                                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Workouts Tracked</p>
+                                    <p className="text-2xl font-black text-white tracking-tighter">Limited</p>
+                                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Early Slots</p>
                                 </div>
                             </div>
                         </div>

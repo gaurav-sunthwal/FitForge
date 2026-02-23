@@ -39,6 +39,7 @@ export const userProfiles = pgTable('user_profiles', {
 export const userGoals = pgTable('user_goals', {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').references(() => users.id).notNull().unique(),
+    fitnessGoal: text('fitness_goal').default('maintain'), // 'lose', 'gain', 'maintain', 'athletic'
     calorieTarget: integer('calorie_target'),
     proteinTarget: integer('protein_target'),
     carbsTarget: integer('carbs_target'),
@@ -46,6 +47,7 @@ export const userGoals = pgTable('user_goals', {
     waterTarget: integer('water_target'),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
 
 export const foodLogs = pgTable('food_logs', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -69,10 +71,12 @@ export const workoutLogs = pgTable('workout_logs', {
     id: uuid('id').primaryKey().defaultRandom(),
     userId: uuid('user_id').references(() => users.id).notNull(),
     workoutName: text('workout_name').notNull(),
+    exercises: text('exercises'), // Stored as JSON string of completed exercises
     duration: integer('duration'), // in minutes
     caloriesBurned: integer('calories_burned'),
     timestamp: timestamp('timestamp').defaultNow().notNull(),
 });
+
 
 export const progressPhotos = pgTable('progress_photos', {
     id: uuid('id').primaryKey().defaultRandom(),
@@ -121,3 +125,30 @@ export const deviceTokens = pgTable('device_tokens', {
     createdAt: timestamp('created_at').defaultNow().notNull(),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+export const earlyAccessUsers = pgTable('early_access_users', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    email: text('email').unique().notNull(),
+    name: text('name'),
+    downloadCount: integer('download_count').default(0),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const invitations = pgTable('invitations', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    referrerId: uuid('referrer_id').references(() => users.id).notNull(),
+    status: text('status').default('pending'), // 'pending', 'clicked', 'downloaded'
+    inviteCode: text('invite_code').notNull(), // Unique code for this specific invite action
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+export const workoutPlans = pgTable('workout_plans', {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id').references(() => users.id).notNull().unique(),
+    plan: text('plan').notNull(), // Stored as JSON string
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+

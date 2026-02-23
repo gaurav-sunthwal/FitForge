@@ -13,8 +13,11 @@
       "infoPlist": {
         "NSCameraUsageDescription": "This app needs access to your camera to take gym progress photos.",
         "NSPhotoLibraryUsageDescription": "This app needs access to your photo library to upload gym progress photos.",
-        "NSUserNotificationsUsageDescription": "This app needs permission to send you reminders for gym selfies, meal tracking, and hydration."
-      }
+        "NSUserNotificationsUsageDescription": "This app needs permission to send you reminders for gym selfies, meal tracking, and hydration.",
+        "NSHealthShareUsageDescription": "This app needs access to your health data to track steps and calories automatically.",
+        "NSHealthUpdateUsageDescription": "This app needs permission to save workout data to your health records."
+      },
+      "bundleIdentifier": "com.terminal2.fitme"
     },
     "android": {
       "adaptiveIcon": {
@@ -29,7 +32,9 @@
         "WRITE_EXTERNAL_STORAGE",
         "POST_NOTIFICATIONS",
         "RECEIVE_BOOT_COMPLETED",
-        "VIBRATE"
+        "VIBRATE",
+        "android.permission.ACTIVITY_RECOGNITION",
+        "android.permission.BODY_SENSORS"
       ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,

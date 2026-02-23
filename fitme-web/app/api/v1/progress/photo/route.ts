@@ -14,10 +14,14 @@ export async function POST(request: Request) {
             const body = await request.json();
             imageUrl = body.imageUrl;
             caption = body.caption;
+            
+            // If the imageUrl is a base64 string from the mobile app, we keep it as is.
+            // In a production app, you would upload this to S3/Cloudinary here.
         } else {
             const formData = await request.formData();
             const image = formData.get('image') as File;
             caption = formData.get('caption') as string;
+            // Mock URL for web-based multipart uploads
             imageUrl = `https://storage.googleapis.com/fitme-mock/${image?.name || 'photo.jpg'}`;
         }
 
@@ -27,7 +31,7 @@ export async function POST(request: Request) {
 
         const [newPhoto] = await db.insert(progressPhotos).values({
             userId: userId,
-            imageUrl: imageUrl,
+            imageUrl: imageUrl, // Now storing the base64 or hosted URL
             caption: caption,
         }).returning();
 

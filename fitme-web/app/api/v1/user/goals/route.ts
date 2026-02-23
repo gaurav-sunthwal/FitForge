@@ -7,7 +7,7 @@ import { getUserId } from '@/lib/auth';
 export async function POST(request: Request) {
     try {
         const body = await request.json();
-        const { currentWeight, calorieTarget, proteinTarget, carbsTarget, fatsTarget, waterTarget } = body;
+        const { currentWeight, calorieTarget, proteinTarget, carbsTarget, fatsTarget, waterTarget, fitnessGoal } = body;
         const userId = await getUserId();
 
         // Update goals
@@ -18,6 +18,7 @@ export async function POST(request: Request) {
             carbsTarget: carbsTarget,
             fatsTarget: fatsTarget,
             waterTarget: waterTarget,
+            fitnessGoal: fitnessGoal,
         }).onConflictDoUpdate({
             target: userGoals.userId,
             set: {
@@ -26,9 +27,11 @@ export async function POST(request: Request) {
                 carbsTarget: carbsTarget,
                 fatsTarget: fatsTarget,
                 waterTarget: waterTarget,
+                fitnessGoal: fitnessGoal,
                 updatedAt: new Date(),
             }
         });
+
 
         return NextResponse.json({
             success: true,

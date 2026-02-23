@@ -30,10 +30,10 @@ const Footer = () => {
                             Your transformation is just one tap away. Join the FitMe community today.
                         </p>
                         <button
-                            onClick={() => window.open('https://apps.apple.com', '_blank')}
+                            onClick={() => scrollToSection('download')}
                             className="bg-white text-black px-8 py-3 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-blue-500 hover:text-white transition-all active:scale-95 shadow-lg"
                         >
-                            Download App
+                            Join Early Access
                         </button>
                     </div>
 

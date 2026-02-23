@@ -35,17 +35,17 @@ export async function GET() {
         // Calculate streak
         let currentStreak = 0;
         let checkDate = new Date(today);
-        
+
         // Loop to check consecutive days
         // We start checking from TODAY. If today has a workout, streak++ and check yesterday.
         // If today has NO workout, we allow the streak to continue from yesterday (streak isn't broken yet if I haven't worked out TODAY).
         // But the previous implementation had a specific check for i==0.
-        
+
         // Revised logic:
         // Check today. 
         // If yes -> streak++, check yesterday.
         // If no -> check yesterday. If yesterday yes -> streak++, check day before. If yesterday no -> streak broken (0).
-        
+
         // Actually, typical streak logic:
         // Count consecutive days going back from today.
         // Special case: if I haven't done today's workout yet, my streak is the count ending yesterday.
@@ -71,7 +71,7 @@ export async function GET() {
         // Now loop backwards from checkDate
         // We already handled "start point", now just count backwards as long as we find workouts
         // But wait, the loop structure I'm replacing was a bit different. Let's simpler loop.
-        
+
         // Reset checkDate to start checking from wherever we decided "the chain continues"
         // If today matches, we continue from yesterday.
         // If today misses but yesterday matches, we continue from yesterday.
@@ -97,20 +97,20 @@ export async function GET() {
 
         // Let's stick to the original logic structure but with fixed dates, it was likely trying to do:
         checkDate = new Date(today); // Reset to today
-        
+
         for (let i = 0; i < 365; i++) {
             const dateStr = getLocalDateString(checkDate);
-            
+
             if (workoutDatesSet.has(dateStr)) {
                 if (i === 0) {
                     currentStreak++; // Today matched
                 } else {
-                     currentStreak++; // Past day matched
+                    currentStreak++; // Past day matched
                 }
-                 checkDate.setDate(checkDate.getDate() - 1);
+                checkDate.setDate(checkDate.getDate() - 1);
             } else if (i === 0) {
                 // Today missing, but that's allowed. Don't break streak, just move to yesterday.
-                 checkDate.setDate(checkDate.getDate() - 1);
+                checkDate.setDate(checkDate.getDate() - 1);
             } else {
                 // Break on any other missing day
                 break;
@@ -130,20 +130,61 @@ export async function GET() {
         const daysPassed = today.getDate();
         const consistencyPercentage = Math.round((monthlyWorkouts / daysPassed) * 100);
 
+        // Create a map of dates to workout details
+        const workoutsByDate: { [key: string]: any } = {};
+        allWorkouts.forEach(workout => {
+            try {
+                const dateStr = getLocalDateString(new Date(workout.timestamp));
+                let parsedExercises = [];
+                if (workout.exercises) {
+                    if (typeof workout.exercises === 'string') {
+                        try {
+                            parsedExercises = JSON.parse(workout.exercises);
+                        } catch (e) {
+                            parsedExercises = [workout.exercises]; // Fallback if it's just a string but not JSON
+                        }
+                    } else if (Array.isArray(workout.exercises)) {
+                        parsedExercises = workout.exercises;
+                    }
+                }
+
+                workoutsByDate[dateStr] = {
+                    workoutName: workout.workoutName,
+                    duration: workout.duration,
+                    caloriesBurned: workout.caloriesBurned,
+                    exercises: Array.isArray(parsedExercises) ? parsedExercises : [],
+                    timestamp: workout.timestamp
+                };
+            } catch (e) {
+                console.error(`Error processing workout ${workout.id}:`, e);
+            }
+        });
+
+
+
         const stats = {
             currentStreak,
             monthlyWorkouts,
             consistencyPercentage: Math.min(consistencyPercentage, 100),
             totalWorkouts: allWorkouts.length,
             workoutDates: workoutDatesArray,
+            workoutsByDate: workoutsByDate,
         };
 
         return NextResponse.json({
             success: true,
             data: stats
         });
+
     } catch (error: any) {
-        console.error('Error fetching stats:', error);
-        return NextResponse.json({ success: false, message: 'Failed to fetch statistics', error: error.message }, { status: 500 });
+        console.error('CRITICAL: Error fetching stats:', error);
+        console.error('Stack:', error.stack);
+        return NextResponse.json({
+            success: false,
+            message: 'Failed to fetch statistics',
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        }, { status: 500 });
     }
+
 }
