@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { notifications, userNotifications, deviceTokens, users } from '@/lib/db/schema';
 import jwt from 'jsonwebtoken';
-import { eq } from 'drizzle-orm';
+import { eq, inArray } from 'drizzle-orm';
 
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || 'admin-secret-key-987654';
 const EXPO_ACCESS_TOKEN = process.env.EXPO_ACCESS_TOKEN;
@@ -24,32 +24,77 @@ function verifyAdminToken(request: NextRequest) {
     }
 }
 
-// Send push notification using Expo
-async function sendPushNotification(expoPushToken: string, title: string, body: string, data?: any) {
-    const message = {
-        to: expoPushToken,
+// Send push notifications in batch using Expo Push API
+async function sendPushNotifications(
+    tokens: { id: string; token: string }[],
+    title: string,
+    body: string,
+    data?: any
+): Promise<{ sentCount: number; invalidTokenIds: string[] }> {
+    if (tokens.length === 0) return { sentCount: 0, invalidTokenIds: [] };
+
+    const messages = tokens.map(({ token }) => ({
+        to: token,
         sound: 'default',
         title,
         body,
         data: data || {},
+        priority: 'high',
+        channelId: 'default', // Required for Android
+    }));
+
+    const headers: Record<string, string> = {
+        'Accept': 'application/json',
+        'Accept-Encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
     };
+
+    // Include the Expo Access Token if available — required for production delivery
+    const expoAccessToken = process.env.EXPO_ACCESS_TOKEN;
+    if (expoAccessToken) {
+        headers['Authorization'] = `Bearer ${expoAccessToken}`;
+    } else {
+        console.warn('⚠️ EXPO_ACCESS_TOKEN is not set. Push notifications may be rate-limited in production.');
+    }
 
     try {
         const response = await fetch('https://exp.host/--/api/v2/push/send', {
             method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Accept-encoding': 'gzip, deflate',
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(message),
+            headers,
+            body: JSON.stringify(messages),
         });
 
+        if (!response.ok) {
+            console.error('Expo push API returned error:', response.status, await response.text());
+            return { sentCount: 0, invalidTokenIds: [] };
+        }
+
         const result = await response.json();
-        return result;
+        // result.data is an array of ticket objects, one per message sent
+        const tickets: any[] = result?.data || [];
+
+        let sentCount = 0;
+        const invalidTokenIds: string[] = [];
+
+        tickets.forEach((ticket, index) => {
+            if (ticket.status === 'ok') {
+                sentCount++;
+            } else if (ticket.status === 'error') {
+                const details = ticket.details || {};
+                // DeviceNotRegistered means the token is stale/invalid — remove it
+                if (details.error === 'DeviceNotRegistered' || details.error === 'InvalidCredentials') {
+                    invalidTokenIds.push(tokens[index].id);
+                    console.log(`Removing stale token for device: ${tokens[index].id}`);
+                } else {
+                    console.error(`Push failed for token ${tokens[index].token}:`, ticket.message, details);
+                }
+            }
+        });
+
+        return { sentCount, invalidTokenIds };
     } catch (error) {
-        console.error('Error sending push notification:', error);
-        return null;
+        console.error('Error sending push notifications:', error);
+        return { sentCount: 0, invalidTokenIds: [] };
     }
 }
 
@@ -97,19 +142,20 @@ export async function POST(request: NextRequest) {
 
         await Promise.all(userNotificationPromises);
 
-        // Send push notifications to all devices
-        let sentCount = 0;
-        const pushNotificationPromises = allDeviceTokens.map(async (device) => {
-            const result = await sendPushNotification(
-                device.token,
-                title,
-                body,
-                { notificationId, actionUrl }
-            );
-            if (result) sentCount++;
-        });
+        // Send push notifications to all devices in batch
+        const tokenList = allDeviceTokens.map((d) => ({ id: d.id, token: d.token }));
+        const { sentCount, invalidTokenIds } = await sendPushNotifications(
+            tokenList,
+            title,
+            body,
+            { notificationId, actionUrl }
+        );
 
-        await Promise.all(pushNotificationPromises);
+        // Clean up stale/invalid device tokens
+        if (invalidTokenIds.length > 0) {
+            await db.delete(deviceTokens).where(inArray(deviceTokens.id, invalidTokenIds));
+            console.log(`Removed ${invalidTokenIds.length} stale device token(s).`);
+        }
 
         // Update recipient count
         await db.update(notifications)
@@ -124,14 +170,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error: any) {
         console.error('Notification creation error:', error);
-        
+
         if (error.message && error.message.includes('Unauthorized')) {
             return NextResponse.json(
                 { error: error.message },
                 { status: 401 }
             );
         }
-        
+
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
@@ -152,14 +198,14 @@ export async function GET(request: NextRequest) {
         });
     } catch (error: any) {
         console.error('Fetch notifications error:', error);
-        
+
         if (error.message && error.message.includes('Unauthorized')) {
             return NextResponse.json(
                 { error: error.message },
                 { status: 401 }
             );
         }
-        
+
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }
@@ -201,14 +247,14 @@ export async function DELETE(request: NextRequest) {
         });
     } catch (error: any) {
         console.error('Delete notification error:', error);
-        
+
         if (error.message && error.message.includes('Unauthorized')) {
             return NextResponse.json(
                 { error: error.message },
                 { status: 401 }
             );
         }
-        
+
         return NextResponse.json(
             { error: 'Internal server error' },
             { status: 500 }

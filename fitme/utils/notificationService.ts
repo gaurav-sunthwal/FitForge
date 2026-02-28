@@ -391,14 +391,16 @@ export class NotificationService {
 
     /**
      * Initialize notification service on app start
+     * Note: Device token registration is handled separately by AuthContext
+     * after the user is authenticated, to ensure the auth token is available.
      */
     static async initialize(): Promise<void> {
         const hasPermission = await this.requestPermissions();
         if (hasPermission) {
             const settings = await this.getSettings();
             await this.scheduleAllNotifications(settings);
-            // Register device token with backend
-            await this.registerDeviceToken();
+            // Note: registerDeviceToken() is NOT called here because the user may not
+            // be logged in yet (e.g. fresh install). AuthContext calls it after login.
 
             // Register background response listener
             Notifications.addNotificationResponseReceivedListener(async (response) => {
@@ -425,6 +427,8 @@ export class NotificationService {
 
     /**
      * Get Expo Push Token
+     * This returns an ExponentPushToken in dev (Expo Go) and production standalone builds.
+     * It requires the app's projectId from eas.json / app.json extra.eas.projectId.
      */
     static async getExpoPushToken(): Promise<string | null> {
         try {
@@ -437,9 +441,14 @@ export class NotificationService {
                 projectId: '2e37e596-0347-4026-bf2c-ff9782fbc0a0',
             });
 
+            console.log('📱 Expo Push Token:', token.data);
             return token.data;
         } catch (error) {
-            console.error('Error getting Expo push token:', error);
+            // In production builds, this can fail if:
+            // 1. The app is not linked to the correct EAS project
+            // 2. Google services (FCM) are not configured for Android
+            // 3. APNs is not configured for iOS
+            console.error('❌ Error getting Expo push token (check FCM/APNs config for production):', error);
             return null;
         }
     }
